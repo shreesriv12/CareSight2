@@ -1,12 +1,13 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-
+import { useRouter } from 'next/navigation';
 import { Upload, User, Mail, Lock, Phone, MapPin, Calendar, Activity, Home, Camera, Users, Plus, Minus } from 'lucide-react';
 import { createClient } from '@/lib/supabaseClient';
 
 const supabase = createClient();
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [role, setRole] = useState('hospital');
   const [form, setForm] = useState<any>({
     name: '',
@@ -30,6 +31,7 @@ export default function RegisterPage() {
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [hospitals, setHospitals] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const genderOptions = [
     { value: '', label: 'Select Gender' },
@@ -78,6 +80,20 @@ export default function RegisterPage() {
     { value: 'emergency_contact', label: 'Emergency Contact' },
     { value: 'other', label: 'Other' }
   ];
+
+  // Function to get dashboard route based on role
+  const getDashboardRoute = (role: string) => {
+    switch (role) {
+      case 'hospital':
+        return '/dashboard/hospital';
+      case 'nurse':
+        return '/dashboard/nurse';
+      case 'patients':
+        return '/dashboard/patient';
+      default:
+        return '/dashboard';
+    }
+  };
 
   const handleChange = (key: string, value: any) => {
     setForm({ ...form, [key]: value });
@@ -150,152 +166,184 @@ export default function RegisterPage() {
   }, [role]);
 
   const handleRegister = async () => {
-    let payload = { ...form };
-
-    if (role === 'hospital') {
-      payload = {
-        name: form.name,
-        email: form.email,
-        password: form.password,
-        address: form.address,
-        phone_number: form.phone_number,
-        nurse_ids: [],
-        patient_ids: [],
-      };
-    }
-
-    else if (role === 'nurse') {
-      const match = hospitals.find(
-        (h: any) => h.name.toLowerCase() === form.hospital_name_input.toLowerCase()
-      );
-
-      if (!match) {
-        alert('❌ Hospital name not found!');
-        return;
-      }
-
-      payload = {
-        name: form.name,
-        email: form.email,
-        password: form.password,
-        phone_number: form.phone_number,
-        hospital_id: match.id,
-        alert_ids: [],
-        shift: new Date().toISOString(),
-        patient_ids: [],
-      };
-    }
-
-    else if (role === 'patient') {
-      const match = hospitals.find(
-        (h: any) => h.name.toLowerCase() === form.hospital_name_input.toLowerCase()
-      );
-
-      if (!match) {
-        alert('❌ Hospital name not found!');
-        return;
-      }
-
-      // Upload image to Supabase Storage
-      let photo_url = form.photo_url;
-      if (form.photo_file) {
-        const fileExt = form.photo_file.name.split('.').pop();
-        const fileName = `${Date.now()}.${fileExt}`;
-        const filePath = `patient_photos/${fileName}`;
-
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('patient-photos') // Bucket name
-          .upload(filePath, form.photo_file);
-
-        if (uploadError) {
-          alert('❌ Image Upload Failed');
-          return;
-        }
-
-        const { data: publicURLData } = supabase
-          .storage
-          .from('patient-photos')
-          .getPublicUrl(filePath);
-
-        photo_url = publicURLData?.publicUrl || '';
-      }
-
-      payload = {
-        name: form.name,
-        email: form.email,
-        password: form.password,
-        phone_number: form.phone_number,
-        age: parseInt(form.age),
-        gender: form.gender,
-        room: form.room,
-        diagnosis: form.diagnosis,
-        preferred_lang: form.preferred_lang,
-        photo_url: photo_url,
-        hospital_id: match.id,
-        assigned_nurse_ids: [],
-        family: form.family,
-      };
-    }
-
-    const table =
-      role === 'hospital' ? 'hospital' : role === 'nurse' ? 'nurse' : 'patients';
-    
-    // Insert the new record
-    const { data: insertedData, error } = await supabase
-      .from(table)
-      .insert([payload])
-      .select();
-
-    if (error) {
-      alert('❌ Error: ' + error.message);
+    // Basic validation
+    if (!form.name || !form.email || !form.password || !form.phone_number) {
+      alert('Please fill in all required fields');
       return;
     }
 
-    // Update hospital's nurse_ids or patient_ids array
-    if (role === 'nurse' || role === 'patient') {
-      const match = hospitals.find(
-        (h: any) => h.name.toLowerCase() === form.hospital_name_input.toLowerCase()
-      );
+    setIsLoading(true);
+    let payload = { ...form };
 
-      if (match && insertedData && insertedData.length > 0) {
-        const newUserId = insertedData[0].id;
-        
-        // Get current hospital data
-        const { data: hospitalData, error: hospitalFetchError } = await supabase
-          .from('hospital')
-          .select('nurse_ids, patient_ids')
-          .eq('id', match.id)
-          .single();
+    try {
+      if (role === 'hospital') {
+        payload = {
+          name: form.name,
+          email: form.email,
+          password: form.password,
+          address: form.address,
+          phone_number: form.phone_number,
+          nurse_ids: [],
+          patient_ids: [],
+        };
+      }
 
-        if (hospitalFetchError) {
-          alert('❌ Error fetching hospital data: ' + hospitalFetchError.message);
+      else if (role === 'nurse') {
+        const match = hospitals.find(
+          (h: any) => h.name.toLowerCase() === form.hospital_name_input.toLowerCase()
+        );
+
+        if (!match) {
+          alert('❌ Hospital name not found!');
+          setIsLoading(false);
           return;
         }
 
-        // Update the appropriate array
-        let updateData = {};
-        if (role === 'nurse') {
-          const updatedNurseIds = [...(hospitalData.nurse_ids || []), newUserId];
-          updateData = { nurse_ids: updatedNurseIds };
-        } else if (role === 'patient') {
-          const updatedPatientIds = [...(hospitalData.patient_ids || []), newUserId];
-          updateData = { patient_ids: updatedPatientIds };
+        payload = {
+          name: form.name,
+          email: form.email,
+          password: form.password,
+          phone_number: form.phone_number,
+          hospital_id: match.id,
+          alert_ids: [],
+          shift: new Date().toISOString(),
+          patient_ids: [],
+        };
+      }
+
+      else if (role === 'patient') {
+        const match = hospitals.find(
+          (h: any) => h.name.toLowerCase() === form.hospital_name_input.toLowerCase()
+        );
+
+        if (!match) {
+          alert('❌ Hospital name not found!');
+          setIsLoading(false);
+          return;
         }
 
-        // Update hospital record
-        const { error: hospitalUpdateError } = await supabase
-          .from('hospital')
-          .update(updateData)
-          .eq('id', match.id);
+        // Upload image to Supabase Storage
+        let photo_url = form.photo_url;
+        if (form.photo_file) {
+          const fileExt = form.photo_file.name.split('.').pop();
+          const fileName = `${Date.now()}.${fileExt}`;
+          const filePath = `patient_photos/${fileName}`;
 
-        if (hospitalUpdateError) {
-          alert('❌ Error updating hospital: ' + hospitalUpdateError.message);
-          return;
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('patient-photos') // Bucket name
+            .upload(filePath, form.photo_file);
+
+          if (uploadError) {
+            alert('❌ Image Upload Failed');
+            setIsLoading(false);
+            return;
+          }
+
+          const { data: publicURLData } = supabase
+            .storage
+            .from('patient-photos')
+            .getPublicUrl(filePath);
+
+          photo_url = publicURLData?.publicUrl || '';
+        }
+
+        payload = {
+          name: form.name,
+          email: form.email,
+          password: form.password,
+          phone_number: form.phone_number,
+          age: parseInt(form.age),
+          gender: form.gender,
+          room: form.room,
+          diagnosis: form.diagnosis,
+          preferred_lang: form.preferred_lang,
+          photo_url: photo_url,
+          hospital_id: match.id,
+          assigned_nurse_ids: [],
+          family: form.family,
+        };
+      }
+
+      const table =
+        role === 'hospital' ? 'hospital' : role === 'nurse' ? 'nurse' : 'patients';
+      
+      // Insert the new record
+      const { data: insertedData, error } = await supabase
+        .from(table)
+        .insert([payload])
+        .select();
+
+      if (error) {
+        alert('❌ Error: ' + error.message);
+        setIsLoading(false);
+        return;
+      }
+
+      // Update hospital's nurse_ids or patient_ids array
+      if (role === 'nurse' || role === 'patient') {
+        const match = hospitals.find(
+          (h: any) => h.name.toLowerCase() === form.hospital_name_input.toLowerCase()
+        );
+
+        if (match && insertedData && insertedData.length > 0) {
+          const newUserId = insertedData[0].id;
+          
+          // Get current hospital data
+          const { data: hospitalData, error: hospitalFetchError } = await supabase
+            .from('hospital')
+            .select('nurse_ids, patient_ids')
+            .eq('id', match.id)
+            .single();
+
+          if (hospitalFetchError) {
+            alert('❌ Error fetching hospital data: ' + hospitalFetchError.message);
+            setIsLoading(false);
+            return;
+          }
+
+          // Update the appropriate array
+          let updateData = {};
+          if (role === 'nurse') {
+            const updatedNurseIds = [...(hospitalData.nurse_ids || []), newUserId];
+            updateData = { nurse_ids: updatedNurseIds };
+          } else if (role === 'patient') {
+            const updatedPatientIds = [...(hospitalData.patient_ids || []), newUserId];
+            updateData = { patient_ids: updatedPatientIds };
+          }
+
+          // Update hospital record
+          const { error: hospitalUpdateError } = await supabase
+            .from('hospital')
+            .update(updateData)
+            .eq('id', match.id);
+
+          if (hospitalUpdateError) {
+            alert('❌ Error updating hospital: ' + hospitalUpdateError.message);
+            setIsLoading(false);
+            return;
+          }
         }
       }
-    }
 
-    alert('✅ Registered Successfully!');
+      if (insertedData && insertedData.length > 0) {
+        // Store user data in localStorage
+        localStorage.setItem('user_id', insertedData[0].id);
+        localStorage.setItem('role', role);
+        localStorage.setItem('user_name', insertedData[0].name);
+
+        alert('✅ Registered Successfully!');
+        
+        // Navigate to role-specific dashboard
+        const dashboardRoute = getDashboardRoute(role);
+        router.push(dashboardRoute);
+      }
+
+    } catch (error) {
+      console.error('Registration error:', error);
+      alert('❌ Registration failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -328,7 +376,7 @@ export default function RegisterPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <User className="inline w-4 h-4 mr-1" />
-              Full Name
+              Full Name *
             </label>
             <input
               type="text"
@@ -336,13 +384,14 @@ export default function RegisterPage() {
               value={form.name}
               onChange={(e) => handleChange('name', e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <Mail className="inline w-4 h-4 mr-1" />
-              Email Address
+              Email Address *
             </label>
             <input
               type="email"
@@ -350,13 +399,14 @@ export default function RegisterPage() {
               value={form.email}
               onChange={(e) => handleChange('email', e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <Lock className="inline w-4 h-4 mr-1" />
-              Password
+              Password *
             </label>
             <input
               type="password"
@@ -364,13 +414,14 @@ export default function RegisterPage() {
               value={form.password}
               onChange={(e) => handleChange('password', e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              required
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <Phone className="inline w-4 h-4 mr-1" />
-              Phone Number
+              Phone Number *
             </label>
             <input
               type="tel"
@@ -378,6 +429,7 @@ export default function RegisterPage() {
               value={form.phone_number}
               onChange={(e) => handleChange('phone_number', e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              required
             />
           </div>
         </div>
@@ -404,12 +456,13 @@ export default function RegisterPage() {
           <div className="mt-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <Home className="inline w-4 h-4 mr-1" />
-              Hospital
+              Hospital *
             </label>
             <select
               value={form.hospital_name_input}
               onChange={(e) => handleChange('hospital_name_input', e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              required
             >
               <option value="">Select Hospital</option>
               {hospitals.map((hospital) => (
@@ -495,12 +548,13 @@ export default function RegisterPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Home className="inline w-4 h-4 mr-1" />
-                Hospital
+                Hospital *
               </label>
               <select
                 value={form.hospital_name_input}
                 onChange={(e) => handleChange('hospital_name_input', e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                required
               >
                 <option value="">Select Hospital</option>
                 {hospitals.map((hospital) => (
@@ -669,11 +723,46 @@ export default function RegisterPage() {
         {/* Submit Button */}
         <button
           onClick={handleRegister}
-          className="w-full mt-8 bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 px-6 rounded-lg font-semibold hover:from-blue-700 hover:to-indigo-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105"
+          disabled={isLoading}
+          className={`w-full mt-8 py-4 px-6 rounded-lg font-semibold text-white transition-all duration-200 transform hover:scale-105 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+            isLoading 
+              ? 'bg-gray-400 cursor-not-allowed' 
+              : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+          }`}
         >
-          Create Account
+          {isLoading ? (
+            <div className="flex items-center justify-center">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+              Creating Account...
+            </div>
+          ) : (
+            'Create Account'
+          )}
         </button>
+
+          {/* Additional Options */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              Don't have an account?{' '}
+              <button
+                onClick={() => router.push('/login')}
+                className="text-blue-600 hover:text-blue-800 font-medium hover:underline"
+              >
+                Sign In
+              </button>
+            </p>
+          </div>
+
+          {/* Role Information */}
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+            <h3 className="text-sm font-medium text-blue-800 mb-2">Access for:</h3>
+            <div className="flex flex-wrap gap-2 text-xs text-blue-700">
+              <span className="px-2 py-1 bg-blue-100 rounded">Hospitals → /dashboard/hospital</span>
+              <span className="px-2 py-1 bg-blue-100 rounded">Nurses → /dashboard/nurse</span>
+              <span className="px-2 py-1 bg-blue-100 rounded">Patients → /dashboard/patient</span>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
   );
 }
