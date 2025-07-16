@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Upload, User, Mail, Lock, Phone, MapPin, Calendar, Activity, Home, Camera } from 'lucide-react';
+import { Upload, User, Mail, Lock, Phone, MapPin, Calendar, Activity, Home, Camera, Users, Plus, Minus } from 'lucide-react';
 import { createClient } from '@/lib/supabaseClient';
 
 const supabase = createClient();
@@ -24,7 +24,7 @@ export default function RegisterPage() {
     preferred_lang: 'English',
     photo_file: null,
     photo_url: '',
-    family: {},
+    family: [],
     hospital_name_input: '',
   });
 
@@ -67,6 +67,18 @@ export default function RegisterPage() {
     { value: 'Arabic', label: 'Arabic' }
   ];
 
+  const relationshipOptions = [
+    { value: 'spouse', label: 'Spouse' },
+    { value: 'parent', label: 'Parent' },
+    { value: 'child', label: 'Child' },
+    { value: 'sibling', label: 'Sibling' },
+    { value: 'grandparent', label: 'Grandparent' },
+    { value: 'grandchild', label: 'Grandchild' },
+    { value: 'friend', label: 'Friend' },
+    { value: 'emergency_contact', label: 'Emergency Contact' },
+    { value: 'other', label: 'Other' }
+  ];
+
   const handleChange = (key: string, value: any) => {
     setForm({ ...form, [key]: value });
   };
@@ -95,6 +107,34 @@ export default function RegisterPage() {
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  // Family member functions
+  const addFamilyMember = () => {
+    const newMember = {
+      name: '',
+      relationship: '',
+      phone_number: '',
+      email: '',
+      address: '',
+      is_emergency_contact: false
+    };
+    setForm({ 
+      ...form, 
+      family: [...form.family, newMember] 
+    });
+  };
+
+  const removeFamilyMember = (index: number) => {
+    const updatedFamily = form.family.filter((_: any, i: number) => i !== index);
+    setForm({ ...form, family: updatedFamily });
+  };
+
+  const updateFamilyMember = (index: number, field: string, value: any) => {
+    const updatedFamily = form.family.map((member: any, i: number) => 
+      i === index ? { ...member, [field]: value } : member
+    );
+    setForm({ ...form, family: updatedFamily });
   };
 
   // Fetch hospital list once for nurse/patient registration
@@ -199,10 +239,63 @@ export default function RegisterPage() {
 
     const table =
       role === 'hospital' ? 'hospital' : role === 'nurse' ? 'nurse' : 'patients';
-    const { error } = await supabase.from(table).insert([payload]);
+    
+    // Insert the new record
+    const { data: insertedData, error } = await supabase
+      .from(table)
+      .insert([payload])
+      .select();
 
-    if (error) alert('❌ Error: ' + error.message);
-    else alert('✅ Registered Successfully!');
+    if (error) {
+      alert('❌ Error: ' + error.message);
+      return;
+    }
+
+    // Update hospital's nurse_ids or patient_ids array
+    if (role === 'nurse' || role === 'patient') {
+      const match = hospitals.find(
+        (h: any) => h.name.toLowerCase() === form.hospital_name_input.toLowerCase()
+      );
+
+      if (match && insertedData && insertedData.length > 0) {
+        const newUserId = insertedData[0].id;
+        
+        // Get current hospital data
+        const { data: hospitalData, error: hospitalFetchError } = await supabase
+          .from('hospital')
+          .select('nurse_ids, patient_ids')
+          .eq('id', match.id)
+          .single();
+
+        if (hospitalFetchError) {
+          alert('❌ Error fetching hospital data: ' + hospitalFetchError.message);
+          return;
+        }
+
+        // Update the appropriate array
+        let updateData = {};
+        if (role === 'nurse') {
+          const updatedNurseIds = [...(hospitalData.nurse_ids || []), newUserId];
+          updateData = { nurse_ids: updatedNurseIds };
+        } else if (role === 'patient') {
+          const updatedPatientIds = [...(hospitalData.patient_ids || []), newUserId];
+          updateData = { patient_ids: updatedPatientIds };
+        }
+
+        // Update hospital record
+        const { error: hospitalUpdateError } = await supabase
+          .from('hospital')
+          .update(updateData)
+          .eq('id', match.id);
+
+        if (hospitalUpdateError) {
+          alert('❌ Error updating hospital: ' + hospitalUpdateError.message);
+          return;
+        }
+      }
+    }
+
+    alert('✅ Registered Successfully!');
   };
 
   return (
@@ -463,6 +556,112 @@ export default function RegisterPage() {
               <p className="text-sm text-gray-500 mt-1">
                 Upload a profile photo (max 5MB, JPG/PNG)
               </p>
+            </div>
+
+            {/* Family Members Section */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <label className="block text-sm font-medium text-gray-700">
+                  <Users className="inline w-4 h-4 mr-1" />
+                  Family Members
+                </label>
+                <button
+                  type="button"
+                  onClick={addFamilyMember}
+                  className="flex items-center px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Add Member
+                </button>
+              </div>
+
+              {form.family.map((member: any, index: number) => (
+                <div key={index} className="mb-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-medium text-gray-700">
+                      Family Member {index + 1}
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => removeFamilyMember(index)}
+                      className="flex items-center px-2 py-1 text-sm text-red-600 hover:text-red-700 transition-colors"
+                    >
+                      <Minus className="w-4 h-4 mr-1" />
+                      Remove
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                    <input
+                      type="text"
+                      placeholder="Full Name"
+                      value={member.name}
+                      onChange={(e) => updateFamilyMember(index, 'name', e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    />
+                    <select
+                      value={member.relationship}
+                      onChange={(e) => updateFamilyMember(index, 'relationship', e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    >
+                      <option value="">Select Relationship</option>
+                      {relationshipOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                    <input
+                      type="tel"
+                      placeholder="Phone Number"
+                      value={member.phone_number}
+                      onChange={(e) => updateFamilyMember(index, 'phone_number', e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    />
+                    <input
+                      type="email"
+                      placeholder="Email Address"
+                      value={member.email}
+                      onChange={(e) => updateFamilyMember(index, 'email', e.target.value)}
+                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <input
+                      type="text"
+                      placeholder="Address"
+                      value={member.address}
+                      onChange={(e) => updateFamilyMember(index, 'address', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id={`emergency-${index}`}
+                      checked={member.is_emergency_contact}
+                      onChange={(e) => updateFamilyMember(index, 'is_emergency_contact', e.target.checked)}
+                      className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor={`emergency-${index}`} className="text-sm text-gray-700">
+                      Emergency Contact
+                    </label>
+                  </div>
+                </div>
+              ))}
+
+              {form.family.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <Users className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                  <p>No family members added yet.</p>
+                  <p className="text-sm">Click "Add Member" to add family contacts.</p>
+                </div>
+              )}
             </div>
           </div>
         )}
