@@ -20,6 +20,20 @@ export default function LoginPage() {
     setForm({ ...form, [key]: value });
   };
 
+  // Function to get dashboard route based on role
+  const getDashboardRoute = (role: string) => {
+    switch (role) {
+      case 'hospital':
+        return '/dashboard/hospital';
+      case 'nurse':
+        return '/dashboard/nurse';
+      case 'patients':
+        return '/dashboard/patient';
+      default:
+        return '/dashboard';
+    }
+  };
+
   const handleLogin = async () => {
     // Basic validation
     if (!form.email || !form.password) {
@@ -40,12 +54,16 @@ export default function LoginPage() {
           .maybeSingle();
 
         if (data && !error) {
+          // Store user data in localStorage
           localStorage.setItem('user_id', data.id);
           localStorage.setItem('role', role);
           localStorage.setItem('user_name', data.name);
           
           alert('✅ Login Successful!');
-          router.push('/dashboard');
+          
+          // Redirect to role-specific dashboard
+          const dashboardRoute = getDashboardRoute(role);
+          router.push(dashboardRoute);
           return;
         }
       }
@@ -167,9 +185,9 @@ export default function LoginPage() {
           <div className="mt-6 p-4 bg-blue-50 rounded-lg">
             <h3 className="text-sm font-medium text-blue-800 mb-2">Access for:</h3>
             <div className="flex flex-wrap gap-2 text-xs text-blue-700">
-              <span className="px-2 py-1 bg-blue-100 rounded">Hospitals</span>
-              <span className="px-2 py-1 bg-blue-100 rounded">Nurses</span>
-              <span className="px-2 py-1 bg-blue-100 rounded">Patients</span>
+              <span className="px-2 py-1 bg-blue-100 rounded">Hospitals → /dashboard/hospital</span>
+              <span className="px-2 py-1 bg-blue-100 rounded">Nurses → /dashboard/nurse</span>
+              <span className="px-2 py-1 bg-blue-100 rounded">Patients → /dashboard/patient</span>
             </div>
           </div>
         </div>
