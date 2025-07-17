@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, User, Mail, Lock, Phone, MapPin, Calendar, Activity, Home, Camera, Users, Plus, Minus } from 'lucide-react';
+import { Upload, User, Mail, Lock, Phone, MapPin, Calendar, Activity, Home, Camera, Users, Plus, Minus, Hospital } from 'lucide-react';
 import { createClient } from '@/lib/supabaseClient';
 
 const supabase = createClient();
@@ -115,7 +115,7 @@ export default function RegisterPage() {
       }
 
       setForm({ ...form, photo_file: file });
-      
+
       // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -135,9 +135,9 @@ export default function RegisterPage() {
       address: '',
       is_emergency_contact: false
     };
-    setForm({ 
-      ...form, 
-      family: [...form.family, newMember] 
+    setForm({
+      ...form,
+      family: [...form.family, newMember]
     });
   };
 
@@ -147,7 +147,7 @@ export default function RegisterPage() {
   };
 
   const updateFamilyMember = (index: number, field: string, value: any) => {
-    const updatedFamily = form.family.map((member: any, i: number) => 
+    const updatedFamily = form.family.map((member: any, i: number) =>
       i === index ? { ...member, [field]: value } : member
     );
     setForm({ ...form, family: updatedFamily });
@@ -211,7 +211,7 @@ export default function RegisterPage() {
         };
       }
 
-      else if (role === 'patient') {
+      else if (role === 'patients') {
         const match = hospitals.find(
           (h: any) => h.name.toLowerCase() === form.hospital_name_input.toLowerCase()
         );
@@ -266,7 +266,7 @@ export default function RegisterPage() {
 
       const table =
         role === 'hospital' ? 'hospital' : role === 'nurse' ? 'nurse' : 'patients';
-      
+
       // Insert the new record
       const { data: insertedData, error } = await supabase
         .from(table)
@@ -280,14 +280,14 @@ export default function RegisterPage() {
       }
 
       // Update hospital's nurse_ids or patient_ids array
-      if (role === 'nurse' || role === 'patient') {
+      if (role === 'nurse' || role === 'patients') {
         const match = hospitals.find(
           (h: any) => h.name.toLowerCase() === form.hospital_name_input.toLowerCase()
         );
 
         if (match && insertedData && insertedData.length > 0) {
           const newUserId = insertedData[0].id;
-          
+
           // Get current hospital data
           const { data: hospitalData, error: hospitalFetchError } = await supabase
             .from('hospital')
@@ -306,7 +306,7 @@ export default function RegisterPage() {
           if (role === 'nurse') {
             const updatedNurseIds = [...(hospitalData.nurse_ids || []), newUserId];
             updateData = { nurse_ids: updatedNurseIds };
-          } else if (role === 'patient') {
+          } else if (role === 'patients') {
             const updatedPatientIds = [...(hospitalData.patient_ids || []), newUserId];
             updateData = { patient_ids: updatedPatientIds };
           }
@@ -332,7 +332,7 @@ export default function RegisterPage() {
         localStorage.setItem('user_name', insertedData[0].name);
 
         alert('✅ Registered Successfully!');
-        
+
         // Navigate to role-specific dashboard
         const dashboardRoute = getDashboardRoute(role);
         router.push(dashboardRoute);
@@ -347,88 +347,108 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8">
-      <div className="max-w-2xl mx-auto p-8 bg-white rounded-2xl shadow-xl">
+    <div className="min-h-screen bg-gray-900 py-8 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
+      <div className="max-w-2xl w-full p-8 bg-gray-800 rounded-2xl shadow-xl border border-gray-700">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Create Account</h1>
-          <p className="text-gray-600">Register for your healthcare portal</p>
+          <h1 className="text-4xl font-extrabold text-white mb-3">Create Your Account</h1>
+          <p className="text-gray-400 text-lg">Join our healthcare network today</p>
         </div>
 
         {/* Role Selection */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            <User className="inline w-4 h-4 mr-1" />
-            Role
+        <div className="mb-8">
+          <label className="block text-sm font-semibold text-gray-200 mb-2">
+            <User className="inline w-5 h-5 mr-2 text-blue-400" />
+            I am a:
           </label>
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-          >
-            <option value="hospital">Hospital</option>
-            <option value="nurse">Nurse</option>
-            <option value="patient">Patient</option>
-          </select>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <button
+              type="button"
+              onClick={() => setRole('hospital')}
+              className={`flex items-center justify-center px-6 py-3 rounded-xl border-2 transition-all duration-200
+                ${role === 'hospital' ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-gray-700 text-blue-300 border-gray-600 hover:border-blue-500 hover:bg-gray-600'}
+              `}
+            >
+              <Hospital className="w-5 h-5 mr-2" /> Hospital
+            </button>
+            <button
+              type="button"
+              onClick={() => setRole('nurse')}
+              className={`flex items-center justify-center px-6 py-3 rounded-xl border-2 transition-all duration-200
+                ${role === 'nurse' ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-gray-700 text-blue-300 border-gray-600 hover:border-blue-500 hover:bg-gray-600'}
+              `}
+            >
+              <User className="w-5 h-5 mr-2" /> Nurse
+            </button>
+            <button
+              type="button"
+              onClick={() => setRole('patients')}
+              className={`flex items-center justify-center px-6 py-3 rounded-xl border-2 transition-all duration-200
+                ${role === 'patients' ? 'bg-blue-600 text-white border-blue-600 shadow-md' : 'bg-gray-700 text-blue-300 border-gray-600 hover:border-blue-500 hover:bg-gray-600'}
+              `}
+            >
+              <Users className="w-5 h-5 mr-2" /> Patient
+            </button>
+          </div>
         </div>
 
         {/* Common Fields */}
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <User className="inline w-4 h-4 mr-1" />
-              Full Name *
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              <User className="inline w-4 h-4 mr-1 text-gray-400" />
+              Full Name <span className="text-red-400">*</span>
             </label>
             <input
               type="text"
-              placeholder="Enter your full name"
+              placeholder="e.g., John Doe / City General Hospital"
               value={form.name}
               onChange={(e) => handleChange('name', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-700 text-white placeholder-gray-500"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Mail className="inline w-4 h-4 mr-1" />
-              Email Address *
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              <Mail className="inline w-4 h-4 mr-1 text-gray-400" />
+              Email Address <span className="text-red-400">*</span>
             </label>
             <input
               type="email"
-              placeholder="Enter your email"
+              placeholder="e.g., email@example.com"
               value={form.email}
               onChange={(e) => handleChange('email', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-700 text-white placeholder-gray-500"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Lock className="inline w-4 h-4 mr-1" />
-              Password *
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              <Lock className="inline w-4 h-4 mr-1 text-gray-400" />
+              Password <span className="text-red-400">*</span>
             </label>
             <input
               type="password"
-              placeholder="Enter your password"
+              placeholder="Create a strong password"
               value={form.password}
               onChange={(e) => handleChange('password', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-700 text-white placeholder-gray-500"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Phone className="inline w-4 h-4 mr-1" />
-              Phone Number *
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              <Phone className="inline w-4 h-4 mr-1 text-gray-400" />
+              Phone Number <span className="text-red-400">*</span>
             </label>
             <input
               type="tel"
-              placeholder="Enter your phone number"
+              placeholder="e.g., +1 234 567 8900"
               value={form.phone_number}
               onChange={(e) => handleChange('phone_number', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-700 text-white placeholder-gray-500"
               required
             />
           </div>
@@ -436,124 +456,37 @@ export default function RegisterPage() {
 
         {/* Hospital-specific Fields */}
         {role === 'hospital' && (
-          <div className="mt-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <MapPin className="inline w-4 h-4 mr-1" />
-              Hospital Address
-            </label>
-            <textarea
-              placeholder="Enter hospital address"
-              value={form.address}
-              onChange={(e) => handleChange('address', e.target.value)}
-              rows={3}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            />
+          <div className="mt-6 border-t pt-6 border-gray-700">
+            <h3 className="text-lg font-semibold text-white mb-4">Hospital Details</h3>
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                <MapPin className="inline w-4 h-4 mr-1 text-gray-400" />
+                Hospital Address
+              </label>
+              <textarea
+                placeholder="Enter full hospital address"
+                value={form.address}
+                onChange={(e) => handleChange('address', e.target.value)}
+                rows={3}
+                className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-700 text-white placeholder-gray-500"
+              />
+            </div>
           </div>
         )}
 
         {/* Nurse-specific Fields */}
         {role === 'nurse' && (
-          <div className="mt-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Home className="inline w-4 h-4 mr-1" />
-              Hospital *
-            </label>
-            <select
-              value={form.hospital_name_input}
-              onChange={(e) => handleChange('hospital_name_input', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              required
-            >
-              <option value="">Select Hospital</option>
-              {hospitals.map((hospital) => (
-                <option key={hospital.id} value={hospital.name}>
-                  {hospital.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {/* Patient-specific Fields */}
-        {role === 'patient' && (
-          <div className="mt-6 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Calendar className="inline w-4 h-4 mr-1" />
-                  Age
-                </label>
-                <input
-                  type="number"
-                  placeholder="Enter age"
-                  value={form.age}
-                  onChange={(e) => handleChange('age', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <User className="inline w-4 h-4 mr-1" />
-                  Gender
-                </label>
-                <select
-                  value={form.gender}
-                  onChange={(e) => handleChange('gender', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                >
-                  {genderOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Home className="inline w-4 h-4 mr-1" />
-                  Room Number
-                </label>
-                <input
-                  type="text"
-                  placeholder="Enter room number"
-                  value={form.room}
-                  onChange={(e) => handleChange('room', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Activity className="inline w-4 h-4 mr-1" />
-                  Diagnosis
-                </label>
-                <select
-                  value={form.diagnosis}
-                  onChange={(e) => handleChange('diagnosis', e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                >
-                  {diagnosisOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
+          <div className="mt-6 border-t pt-6 border-gray-700">
+            <h3 className="text-lg font-semibold text-white mb-4">Nurse Details</h3>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Home className="inline w-4 h-4 mr-1" />
-                Hospital *
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                <Home className="inline w-4 h-4 mr-1 text-gray-400" />
+                Affiliated Hospital <span className="text-red-400">*</span>
               </label>
               <select
                 value={form.hospital_name_input}
                 onChange={(e) => handleChange('hospital_name_input', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-700 text-white"
                 required
               >
                 <option value="">Select Hospital</option>
@@ -564,158 +497,254 @@ export default function RegisterPage() {
                 ))}
               </select>
             </div>
+          </div>
+        )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Preferred Language
-              </label>
-              <select
-                value={form.preferred_lang}
-                onChange={(e) => handleChange('preferred_lang', e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-              >
-                {languageOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Photo Upload */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Camera className="inline w-4 h-4 mr-1" />
-                Profile Photo
-              </label>
-              <div className="flex items-center space-x-4">
-                <div className="flex-1">
+        {/* Patient-specific Fields */}
+        {role === 'patients' && (
+          <div className="mt-6 border-t pt-6 border-gray-700">
+            <h3 className="text-lg font-semibold text-white mb-4">Patient Details</h3>
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <Calendar className="inline w-4 h-4 mr-1 text-gray-400" />
+                    Age
+                  </label>
                   <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    type="number"
+                    placeholder="e.g., 45"
+                    value={form.age}
+                    onChange={(e) => handleChange('age', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-700 text-white placeholder-gray-500"
                   />
                 </div>
-                {imagePreview && (
-                  <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-gray-300">
-                    <img
-                      src={imagePreview}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <User className="inline w-4 h-4 mr-1 text-gray-400" />
+                    Gender
+                  </label>
+                  <select
+                    value={form.gender}
+                    onChange={(e) => handleChange('gender', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-700 text-white"
+                  >
+                    {genderOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <Home className="inline w-4 h-4 mr-1 text-gray-400" />
+                    Room Number
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., A201"
+                    value={form.room}
+                    onChange={(e) => handleChange('room', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-700 text-white placeholder-gray-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    <Activity className="inline w-4 h-4 mr-1 text-gray-400" />
+                    Diagnosis
+                  </label>
+                  <select
+                    value={form.diagnosis}
+                    onChange={(e) => handleChange('diagnosis', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-700 text-white"
+                  >
+                    {diagnosisOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <Hospital className="inline w-4 h-4 mr-1 text-gray-400" />
+                  Hospital <span className="text-red-400">*</span>
+                </label>
+                <select
+                  value={form.hospital_name_input}
+                  onChange={(e) => handleChange('hospital_name_input', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-700 text-white"
+                  required
+                >
+                  <option value="">Select Hospital</option>
+                  {hospitals.map((hospital) => (
+                    <option key={hospital.id} value={hospital.name}>
+                      {hospital.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Preferred Language
+                </label>
+                <select
+                  value={form.preferred_lang}
+                  onChange={(e) => handleChange('preferred_lang', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-700 text-white"
+                >
+                  {languageOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Photo Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <Camera className="inline w-4 h-4 mr-1 text-gray-400" />
+                  Profile Photo
+                </label>
+                <div className="flex items-center space-x-4">
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="w-full text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-800 file:text-white hover:file:bg-blue-700 cursor-pointer"
                     />
+                  </div>
+                  {imagePreview && (
+                    <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-blue-600 shadow-md flex-shrink-0">
+                      <img
+                        src={imagePreview}
+                        alt="Profile Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Upload a profile photo (max 5MB, JPG/PNG).
+                </p>
+              </div>
+
+              {/* Family Members Section */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white">
+                    <Users className="inline w-5 h-5 mr-2 text-gray-400" />
+                    Family Members / Emergency Contacts
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={addFamilyMember}
+                    className="flex items-center px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Member
+                  </button>
+                </div>
+
+                {form.family.map((member: any, index: number) => (
+                  <div key={index} className="mb-4 p-5 border border-gray-700 rounded-xl bg-gray-700 shadow-sm">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-md font-semibold text-white">
+                        Contact {index + 1}
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => removeFamilyMember(index)}
+                        className="flex items-center px-3 py-1 text-sm text-red-400 border border-red-600 rounded-lg hover:bg-red-900 transition-colors"
+                      >
+                        <Minus className="w-4 h-4 mr-1" />
+                        Remove
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <input
+                        type="text"
+                        placeholder="Full Name"
+                        value={member.name}
+                        onChange={(e) => updateFamilyMember(index, 'name', e.target.value)}
+                        className="px-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-800 text-white placeholder-gray-500"
+                      />
+                      <select
+                        value={member.relationship}
+                        onChange={(e) => updateFamilyMember(index, 'relationship', e.target.value)}
+                        className="px-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-800 text-white"
+                      >
+                        <option value="">Select Relationship</option>
+                        {relationshipOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <input
+                        type="tel"
+                        placeholder="Phone Number"
+                        value={member.phone_number}
+                        onChange={(e) => updateFamilyMember(index, 'phone_number', e.target.value)}
+                        className="px-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-800 text-white placeholder-gray-500"
+                      />
+                      <input
+                        type="email"
+                        placeholder="Email Address"
+                        value={member.email}
+                        onChange={(e) => updateFamilyMember(index, 'email', e.target.value)}
+                        className="px-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-800 text-white placeholder-gray-500"
+                      />
+                    </div>
+
+                    <div className="mb-4">
+                      <input
+                        type="text"
+                        placeholder="Address"
+                        value={member.address}
+                        onChange={(e) => updateFamilyMember(index, 'address', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-gray-800 text-white placeholder-gray-500"
+                      />
+                    </div>
+
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id={`emergency-${index}`}
+                        checked={member.is_emergency_contact}
+                        onChange={(e) => updateFamilyMember(index, 'is_emergency_contact', e.target.checked)}
+                        className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-600 rounded-md bg-gray-800"
+                      />
+                      <label htmlFor={`emergency-${index}`} className="text-sm text-gray-300 font-medium">
+                        Emergency Contact
+                      </label>
+                    </div>
+                  </div>
+                ))}
+
+                {form.family.length === 0 && (
+                  <div className="text-center py-8 text-gray-500 bg-gray-700 rounded-xl border border-dashed border-gray-600">
+                    <Users className="w-12 h-12 mx-auto mb-3 text-gray-600" />
+                    <p className="font-medium">No family members added yet.</p>
+                    <p className="text-sm">Click "Add Member" to include emergency contacts.</p>
                   </div>
                 )}
               </div>
-              <p className="text-sm text-gray-500 mt-1">
-                Upload a profile photo (max 5MB, JPG/PNG)
-              </p>
-            </div>
-
-            {/* Family Members Section */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <label className="block text-sm font-medium text-gray-700">
-                  <Users className="inline w-4 h-4 mr-1" />
-                  Family Members
-                </label>
-                <button
-                  type="button"
-                  onClick={addFamilyMember}
-                  className="flex items-center px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  <Plus className="w-4 h-4 mr-1" />
-                  Add Member
-                </button>
-              </div>
-
-              {form.family.map((member: any, index: number) => (
-                <div key={index} className="mb-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-medium text-gray-700">
-                      Family Member {index + 1}
-                    </h4>
-                    <button
-                      type="button"
-                      onClick={() => removeFamilyMember(index)}
-                      className="flex items-center px-2 py-1 text-sm text-red-600 hover:text-red-700 transition-colors"
-                    >
-                      <Minus className="w-4 h-4 mr-1" />
-                      Remove
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                    <input
-                      type="text"
-                      placeholder="Full Name"
-                      value={member.name}
-                      onChange={(e) => updateFamilyMember(index, 'name', e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    />
-                    <select
-                      value={member.relationship}
-                      onChange={(e) => updateFamilyMember(index, 'relationship', e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    >
-                      <option value="">Select Relationship</option>
-                      {relationshipOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                    <input
-                      type="tel"
-                      placeholder="Phone Number"
-                      value={member.phone_number}
-                      onChange={(e) => updateFamilyMember(index, 'phone_number', e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    />
-                    <input
-                      type="email"
-                      placeholder="Email Address"
-                      value={member.email}
-                      onChange={(e) => updateFamilyMember(index, 'email', e.target.value)}
-                      className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    />
-                  </div>
-
-                  <div className="mb-3">
-                    <input
-                      type="text"
-                      placeholder="Address"
-                      value={member.address}
-                      onChange={(e) => updateFamilyMember(index, 'address', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    />
-                  </div>
-
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id={`emergency-${index}`}
-                      checked={member.is_emergency_contact}
-                      onChange={(e) => updateFamilyMember(index, 'is_emergency_contact', e.target.checked)}
-                      className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor={`emergency-${index}`} className="text-sm text-gray-700">
-                      Emergency Contact
-                    </label>
-                  </div>
-                </div>
-              ))}
-
-              {form.family.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  <Users className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                  <p>No family members added yet.</p>
-                  <p className="text-sm">Click "Add Member" to add family contacts.</p>
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -724,15 +753,15 @@ export default function RegisterPage() {
         <button
           onClick={handleRegister}
           disabled={isLoading}
-          className={`w-full mt-8 py-4 px-6 rounded-lg font-semibold text-white transition-all duration-200 transform hover:scale-105 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-            isLoading 
-              ? 'bg-gray-400 cursor-not-allowed' 
-              : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
-          }`}
+          className={`w-full mt-10 py-4 px-6 rounded-xl font-bold text-white text-lg tracking-wide transition-all duration-300 transform hover:scale-105 shadow-lg
+            ${isLoading
+              ? 'bg-gray-600 cursor-not-allowed'
+              : 'bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50'
+            }`}
         >
           {isLoading ? (
             <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-3"></div>
               Creating Account...
             </div>
           ) : (
@@ -740,29 +769,19 @@ export default function RegisterPage() {
           )}
         </button>
 
-          {/* Additional Options */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <button
-                onClick={() => router.push('/login')}
-                className="text-blue-600 hover:text-blue-800 font-medium hover:underline"
-              >
-                Sign In
-              </button>
-            </p>
-          </div>
-
-          {/* Role Information */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <h3 className="text-sm font-medium text-blue-800 mb-2">Access for:</h3>
-            <div className="flex flex-wrap gap-2 text-xs text-blue-700">
-              <span className="px-2 py-1 bg-blue-100 rounded">Hospitals → /dashboard/hospital</span>
-              <span className="px-2 py-1 bg-blue-100 rounded">Nurses → /dashboard/nurse</span>
-              <span className="px-2 py-1 bg-blue-100 rounded">Patients → /dashboard/patient</span>
-            </div>
-          </div>
+        {/* Additional Options */}
+        <div className="mt-8 text-center">
+          <p className="text-base text-gray-400">
+            Already have an account?{' '}
+            <button
+              onClick={() => router.push('/auth/login')}
+              className="text-blue-400 hover:text-blue-300 font-semibold hover:underline transition-colors"
+            >
+              Sign In
+            </button>
+          </p>
         </div>
       </div>
+    </div>
   );
 }

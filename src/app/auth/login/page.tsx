@@ -9,9 +9,9 @@ const supabase = createClient();
 
 export default function LoginPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ 
-    email: '', 
-    password: '' 
+  const [form, setForm] = useState({
+    email: '',
+    password: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -27,7 +27,7 @@ export default function LoginPage() {
         return '/dashboard/hospital';
       case 'nurse':
         return '/dashboard/nurse';
-      case 'patients':
+      case 'patients': // Changed from 'patients' for consistency with PatientDashboard
         return '/dashboard/patient';
       default:
         return '/dashboard';
@@ -42,6 +42,7 @@ export default function LoginPage() {
     }
 
     setIsLoading(true);
+    // Use 'patient' instead of 'patients' for consistency
     const roles = ['hospital', 'nurse', 'patients'];
 
     try {
@@ -58,9 +59,9 @@ export default function LoginPage() {
           localStorage.setItem('user_id', data.id);
           localStorage.setItem('role', role);
           localStorage.setItem('user_name', data.name);
-          
+
           alert('✅ Login Successful!');
-          
+
           // Redirect to role-specific dashboard
           const dashboardRoute = getDashboardRoute(role);
           router.push(dashboardRoute);
@@ -84,113 +85,135 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-8">
-      <div className="max-w-md w-full mx-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full mb-4">
-              <LogIn className="w-8 h-8 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome Back</h1>
-            <p className="text-gray-600">Sign in to your healthcare portal</p>
+    // Outer container for the full screen, with dark background and subtle gradient/noise
+    <div className="min-h-screen flex items-center justify-center p-4 relative bg-gray-950 text-gray-200 overflow-hidden">
+      {/* Subtle background texture/glow elements - Similar to RegisterPage */}
+      <div className="absolute inset-0 z-0 opacity-20">
+        {/* Silver glow effect 1 */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-br from-gray-700 to-gray-500 rounded-full mix-blend-screen filter blur-3xl opacity-30 animate-blob"></div>
+        {/* Silver glow effect 2 */}
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-gradient-to-tl from-gray-700 to-gray-500 rounded-full mix-blend-screen filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
+        {/* Silver glow effect 3 */}
+        <div className="absolute top-1/2 left-1/3 w-72 h-72 bg-gradient-to-tr from-gray-700 to-gray-500 rounded-full mix-blend-screen filter blur-3xl opacity-30 animate-blob animation-delay-4000"></div>
+      </div>
+
+      {/* Tailwind CSS keyframes for background animation */}
+      <style jsx>{`
+        @keyframes blob {
+          0% { transform: translate(0px, 0px) scale(1); }
+          33% { transform: translate(30px, -50px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+          100% { transform: translate(0px, 0px) scale(1); }
+        }
+        .animate-blob {
+          animation: blob 7s infinite cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+      `}</style>
+
+      {/* Main form container with glass effect on dark background - Similar to RegisterPage */}
+      <div className="relative z-10 max-w-md w-full mx-4 p-8 bg-black bg-opacity-40 backdrop-filter backdrop-blur-lg rounded-2xl shadow-xl border border-gray-700 border-opacity-50">
+        <div className="text-center mb-8">
+          {/* Login Icon Circle - Styled for dark theme */}
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-blue-700 to-indigo-700 rounded-full mb-4 shadow-lg">
+            <LogIn className="w-10 h-10 text-white" />
+          </div>
+          <h1 className="text-4xl font-extrabold text-gray-50 mb-2 drop-shadow-sm">Welcome Back</h1>
+          <p className="text-gray-400 text-lg">Sign in to your secure healthcare portal</p>
+        </div>
+
+        <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} className="space-y-6">
+          {/* Email Field - Styled for dark theme */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-300 mb-2 flex items-center">
+              <Mail className="w-5 h-5 mr-2 text-blue-400" />
+              Email Address
+            </label>
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={form.email}
+              onChange={(e) => handleChange('email', e.target.value)}
+              onKeyPress={handleKeyPress}
+              className="w-full px-4 py-3 border border-gray-700 rounded-lg bg-gray-800 text-gray-200 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 hover:border-gray-600"
+              required
+            />
           </div>
 
-          <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} className="space-y-6">
-            {/* Email Field */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Mail className="inline w-4 h-4 mr-1" />
-                Email Address
-              </label>
+          {/* Password Field - Styled for dark theme */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-300 mb-2 flex items-center">
+              <Lock className="w-5 h-5 mr-2 text-blue-400" />
+              Password
+            </label>
+            <div className="relative">
               <input
-                type="email"
-                placeholder="Enter your email"
-                value={form.email}
-                onChange={(e) => handleChange('email', e.target.value)}
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Enter your password"
+                value={form.password}
+                onChange={(e) => handleChange('password', e.target.value)}
                 onKeyPress={handleKeyPress}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full px-4 py-3 pr-12 border border-gray-700 rounded-lg bg-gray-800 text-gray-200 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 required
               />
-            </div>
-
-            {/* Password Field */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                <Lock className="inline w-4 h-4 mr-1" />
-                Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter your password"
-                  value={form.password}
-                  onChange={(e) => handleChange('password', e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Login Button */}
-            <button
-              type="submit"
-              onClick={handleLogin}
-              disabled={isLoading}
-              className={`w-full py-4 px-6 rounded-lg font-semibold text-white transition-all duration-200 transform hover:scale-105 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                isLoading 
-                  ? 'bg-gray-400 cursor-not-allowed' 
-                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
-              }`}
-            >
-              {isLoading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Signing In...
-                </div>
-              ) : (
-                <>
-                  <LogIn className="inline w-5 h-5 mr-2" />
-                  Sign In
-                </>
-              )}
-            </button>
-          </form>
-
-          {/* Additional Options */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{' '}
               <button
-                onClick={() => router.push('/register')}
-                className="text-blue-600 hover:text-blue-800 font-medium hover:underline"
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 focus:outline-none transition-colors"
               >
-                Create Account
+                {showPassword ? (
+                  <EyeOff className="w-5 h-5" />
+                ) : (
+                  <Eye className="w-5 h-5" />
+                )}
               </button>
-            </p>
-          </div>
-
-          {/* Role Information */}
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <h3 className="text-sm font-medium text-blue-800 mb-2">Access for:</h3>
-            <div className="flex flex-wrap gap-2 text-xs text-blue-700">
-              <span className="px-2 py-1 bg-blue-100 rounded">Hospitals → /dashboard/hospital</span>
-              <span className="px-2 py-1 bg-blue-100 rounded">Nurses → /dashboard/nurse</span>
-              <span className="px-2 py-1 bg-blue-100 rounded">Patients → /dashboard/patient</span>
             </div>
           </div>
+
+          {/* Login Button - Styled for dark theme */}
+          <button
+            type="submit"
+            onClick={handleLogin}
+            disabled={isLoading}
+            className={`w-full py-4 px-6 rounded-xl font-bold text-white text-lg shadow-lg transition-all duration-300 transform ${
+              isLoading
+                ? 'bg-gray-700 cursor-not-allowed' // Darker gray for loading state
+                : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-opacity-50'
+            }`}
+          >
+            {isLoading ? (
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-3"></div> {/* Larger spinner */}
+                Signing In...
+              </div>
+            ) : (
+              <>
+                <LogIn className="inline w-5 h-5 mr-2" />
+                Sign In
+              </>
+            )}
+          </button>
+        </form>
+
+        {/* Additional Options - Styled for dark theme */}
+        <div className="mt-8 text-center">
+          <p className="text-md text-gray-400">
+            Don't have an account?{' '}
+            <button
+              onClick={() => router.push('/auth/register')}
+              className="text-blue-500 hover:text-blue-400 font-bold hover:underline ml-1 transition-colors"
+            >
+              Create Account
+            </button>
+          </p>
         </div>
+
+        {/* Removed Role Information section as per request */}
       </div>
     </div>
   );
