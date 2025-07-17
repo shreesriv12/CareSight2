@@ -17,6 +17,7 @@ import {
   Save,
   X,
   LogOut,
+  Bell, // Add Bell icon for alerts
 } from 'lucide-react';
 
 // Type definitions remain the same
@@ -66,6 +67,20 @@ type MedicationFormType = {
   timing: string;
   instructions: string;
 };
+
+// New Alert Type Definition
+type Alert = {
+  id: string;
+  name: string; // This corresponds to the 'name' column in your alerts table
+  patient_id: string;
+  nurse_id: string;
+  hospital_id: string;
+  status: 'new' | 'acknowledged' | 'resolved'; // Assuming alert_status_enum
+  seen: 'yes' | 'no'; // Assuming alert_seen_enum
+  createdat: string;
+  updatedat: string;
+};
+
 
 // --- MedicationForm Component Definition (moved outside NurseDashboard for clarity and memoization) ---
 interface MedicationFormProps {
@@ -193,6 +208,7 @@ const NurseDashboard: React.FC = () => {
   const [hospitalData, setHospitalData] = useState<Hospital | null>(null);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [medications, setMedications] = useState<Record<string, Medication[]>>({});
+  const [alerts, setAlerts] = useState<Alert[]>([]); // New state for alerts
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -226,6 +242,23 @@ const NurseDashboard: React.FC = () => {
       console.error('Error fetching medications:', err);
     }
   }, [supabase]);
+
+const fetchAlerts = useCallback(async (nurseId: string, patientIds: string[]) => {
+    try {
+      const { data: alertsData, error: alertsError } = await supabase
+        .from('alert') // Change this from 'alerts' to 'alert'
+        .select('*')
+        .eq('nurse_id', nurseId)
+        .in('patient_id', patientIds)
+        .order('createdat', { ascending: false }); // Order by newest first
+
+      if (alertsError) throw alertsError;
+      setAlerts(alertsData || []);
+    } catch (err) {
+      console.error('Error fetching alerts:', err);
+    }
+  }, [supabase]);
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -279,6 +312,10 @@ const NurseDashboard: React.FC = () => {
 
         // 4. Fetch medications
         await fetchMedications(nurse.patient_ids || []);
+
+        // 5. Fetch alerts for the nurse
+        await fetchAlerts(nurse.id, nurse.patient_ids || []);
+
       } catch (err: any) {
         console.error('Error loading dashboard:', err);
         setError(err.message || 'Unexpected error');
@@ -288,7 +325,7 @@ const NurseDashboard: React.FC = () => {
     };
 
     fetchData();
-  }, [fetchMedications]);
+  }, [fetchMedications, fetchAlerts]); // Add fetchAlerts to dependency array
 
   const handleLogout = async () => {
     try {
@@ -384,6 +421,52 @@ const NurseDashboard: React.FC = () => {
       setTimeout(() => setError(null), 3000);
     } finally {
       setMedicationLoading(false);
+    }
+  };
+
+  // New handler for acknowledging alerts
+  const handleAcknowledgeAlert = async (alertId: string) => {
+    try {
+      const { error: updateError } = await supabase
+        .from('alerts')
+        .update({ status: 'acknowledged', seen: 'yes', updatedat: new Date().toISOString() })
+        .eq('id', alertId);
+
+      if (updateError) throw updateError;
+
+      // Optimistically update the UI
+      setAlerts(prevAlerts =>
+        prevAlerts.map(alert =>
+          alert.id === alertId ? { ...alert, status: 'acknowledged', seen: 'yes' } : alert
+        )
+      );
+      setSuccessMessage('Alert acknowledged!');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: any) {
+      console.error('Error acknowledging alert:', err);
+      setError('Failed to acknowledge alert: ' + err.message);
+      setTimeout(() => setError(null), 3000);
+    }
+  };
+
+  // New handler for resolving alerts
+  const handleResolveAlert = async (alertId: string) => {
+    try {
+      const { error: updateError } = await supabase
+        .from('alerts')
+        .update({ status: 'resolved', seen: 'yes', updatedat: new Date().toISOString() })
+        .eq('id', alertId);
+
+      if (updateError) throw updateError;
+
+      // Remove the alert from the UI after resolving
+      setAlerts(prevAlerts => prevAlerts.filter(alert => alert.id !== alertId));
+      setSuccessMessage('Alert resolved!');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: any) {
+      console.error('Error resolving alert:', err);
+      setError('Failed to resolve alert: ' + err.message);
+      setTimeout(() => setError(null), 3000);
     }
   };
 
@@ -503,6 +586,74 @@ const NurseDashboard: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Alerts Section */}
+        <section className="mb-8">
+          <div className="bg-gray-800 rounded-xl shadow-lg border border-gray-700">
+            <div className="p-6 border-b border-gray-700">
+              <h3 className="text-2xl font-bold text-white flex items-center">
+                <Bell className="h-6 w-6 mr-3 text-yellow-400" />
+                Patient Alerts ({alerts.filter(alert => alert.status !== 'resolved').length})
+              </h3>
+            </div>
+            <div className="divide-y divide-gray-700">
+              {alerts.length === 0 ? (
+                <div className="p-6 text-center text-gray-500 py-10">
+                  <Bell className="h-10 w-10 mx-auto text-gray-600 mb-4" />
+                  <p className="text-lg">No new alerts at this time.</p>
+                </div>
+              ) : (
+                alerts.map((alert) => {
+                  const patientName = patients.find(p => p.id === alert.patient_id)?.name || 'Unknown Patient';
+                  const alertStatusClass = alert.status === 'new' ? 'bg-red-900 text-red-200 border-red-700' :
+                                           alert.status === 'acknowledged' ? 'bg-yellow-900 text-yellow-200 border-yellow-700' :
+                                           'bg-gray-700 text-gray-400 border-gray-600';
+                  const alertSeenStatus = alert.seen === 'no' ? 'Unseen' : 'Seen';
+                  const alertTime = new Date(alert.createdat).toLocaleString();
+
+                  return (
+                    <div
+                      key={alert.id}
+                      className={`p-6 transition-all duration-200 hover:bg-gray-700 ${alertStatusClass}`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2">
+                        <div className="flex items-center space-x-3 mb-2 sm:mb-0">
+                          <AlertCircle className="h-6 w-6 flex-shrink-0" />
+                          <p className="text-lg font-semibold">{alert.name} from {patientName}</p>
+                        </div>
+                        <div className="text-sm text-right">
+                          <p>Status: <span className="font-medium capitalize">{alert.status}</span></p>
+                          <p>Seen: <span className="font-medium">{alertSeenStatus}</span></p>
+                          <p>Received: {alertTime}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-3 mt-4 justify-end">
+                        {alert.status === 'new' && (
+                          <button
+                            onClick={() => handleAcknowledgeAlert(alert.id)}
+                            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors duration-200 flex items-center gap-2 shadow-md"
+                          >
+                            <Bell className="h-4 w-4" />
+                            Acknowledge
+                          </button>
+                        )}
+                        {alert.status !== 'resolved' && (
+                          <button
+                            onClick={() => handleResolveAlert(alert.id)}
+                            className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 transition-colors duration-200 flex items-center gap-2 shadow-md"
+                          >
+                            <Save className="h-4 w-4" />
+                            Resolve
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </section>
 
         {/* Patients Section */}
         <section>

@@ -1,22 +1,18 @@
-// pages/emotion-detector.tsx
 "use client";
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import * as faceapi from 'face-api.js';
-// Import createClient directly from Supabase JS library
 import { createClient } from '@supabase/supabase-js';
+import { useRouter } from 'next/navigation'; // Import useRouter
 
 // Define your Supabase enums as TypeScript types for better type safety
 type AlertStatus = 'Reached' | 'Sent';
 type AlertSeen = 'Yes' | 'No';
 
 const EMOTION_DETECTION_DURATION = 10000; // Camera active for 10 seconds
-const ALERT_COOLDOWN_DURATION = 5000; // ***CHANGED: 5 seconds (5000 milliseconds) for alert cooldown***
+const ALERT_COOLDOWN_DURATION = 5000; // 5 seconds (5000 milliseconds) for alert cooldown
 const MODEL_CDN_URL = 'https://raw.githubusercontent.com/justadudewhohacks/face-api.js/master/weights';
-
 // Initialize Supabase client directly here.
-// IMPORTANT: Ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
-// are set in your .env.local file for client-side access.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -41,7 +37,9 @@ const EmotionDetectorPage: React.FC = () => {
 
     // Cooldown mechanism for alerts
     const lastAlertTimestampRef = useRef<number>(0);
-    const currentNegativeEmotionRef = useRef<string | null>(null); // To help detect a *change* in negative emotion
+    const currentNegativeEmotionRef = useRef<string | null>(null);
+
+    const router = useRouter(); // Initialize useRouter
 
     // Effect to load user and patient details
     useEffect(() => {
@@ -126,7 +124,6 @@ const EmotionDetectorPage: React.FC = () => {
 
     // Callback to insert an alert into Supabase
     const insertAlert = useCallback(async (detectedEmotion: string) => {
-        // Prevent logging if user/patient details are not ready
         if (isPatientDetailsLoading || !currentUserId || currentUserRole !== 'patients' || !currentPatientHospitalId) {
             console.warn('Cannot log alert: Patient details not fully loaded or not logged in as a patient.');
             return;
@@ -134,15 +131,9 @@ const EmotionDetectorPage: React.FC = () => {
 
         const now = Date.now();
 
-        // ***GLOBAL COOLDOWN CHECK: Only send alert if enough time has passed since the last one***
         if (now - lastAlertTimestampRef.current < ALERT_COOLDOWN_DURATION) {
             console.log(`Alert system is on global cooldown (${ALERT_COOLDOWN_DURATION / 1000}s). Skipping alert for ${detectedEmotion}.`);
-            // Optional: Show a temporary message to the user that alert is on cooldown
-            // if (alertMessage === null) { // Only set if no other alert message is active
-            //     setAlertMessage(`Alert on cooldown. Please wait.`);
-            //     setTimeout(() => setAlertMessage(null), 2000);
-            // }
-            return; // Exit if still on cooldown
+            return;
         }
 
         const patientIdToLog = currentUserId;
@@ -168,14 +159,12 @@ const EmotionDetectorPage: React.FC = () => {
 
             console.log('Alert inserted successfully:', data);
             setAlertMessage(`Alert for ${detectedEmotion} logged successfully!`);
-            // ***Update timestamp ONLY on successful insertion***
             lastAlertTimestampRef.current = now;
-            currentNegativeEmotionRef.current = detectedEmotion; // Store the emotion that triggered this specific alert
+            currentNegativeEmotionRef.current = detectedEmotion;
         } catch (err) {
             console.error('Error inserting alert into Supabase:', err);
             setAlertMessage(`Failed to log alert for ${detectedEmotion}: ${err instanceof Error ? err.message : String(err)}`);
         } finally {
-            // Clear the alert message after a delay
             setTimeout(() => setAlertMessage(null), 3000);
         }
     }, [currentUserId, currentUserRole, currentPatientHospitalId, currentPatientNurseIds, isPatientDetailsLoading]);
@@ -216,85 +205,68 @@ const EmotionDetectorPage: React.FC = () => {
                     const triggerEmotions = ['sad', 'fear', 'angry', 'disgust'];
 
                     if (triggerEmotions.includes(dominantEmotion)) {
-                        // If a negative emotion is detected:
-                        // Call insertAlert. The insertAlert function itself will handle the 5-second cooldown.
-                        // We also track if the *specific* negative emotion has changed to allow quicker alerts
-                        // if a new distinct negative emotion is detected after cooldown.
                         if (dominantEmotion !== currentNegativeEmotionRef.current) {
-                            // If the negative emotion has changed, try to send an alert.
-                            // This attempt will still be subject to the global ALERT_COOLDOWN_DURATION
                             insertAlert(dominantEmotion);
                         } else {
-                            // If it's the *same* negative emotion, still call insertAlert.
-                            // The global cooldown in insertAlert will prevent spam.
                             insertAlert(dominantEmotion);
                         }
-                        // Update the current dominant negative emotion detected
                         currentNegativeEmotionRef.current = dominantEmotion;
                     } else {
-                        // If a non-trigger emotion is detected, clear the currentNegativeEmotionRef
-                        // This prepares for a new negative emotion alert if one appears later.
                         currentNegativeEmotionRef.current = null;
                     }
                 }
             }
         } else {
             setEmotion(null);
-            // If no face is detected, also reset the current negative emotion
             currentNegativeEmotionRef.current = null;
         }
-    }, [insertAlert]); // detectEmotions depends on insertAlert
+    }, [insertAlert]);
 
     // Main useEffect for managing component lifecycle and camera/detection
     useEffect(() => {
-        loadModels(); // Load AI models on component mount
+        loadModels();
     }, [loadModels]);
 
     useEffect(() => {
-        // Only start camera and detection if models are loaded, no errors,
-        // patient details are ready, and user is a logged-in patient.
         if (!loading && !error && !isPatientDetailsLoading && currentUserId && currentUserRole === 'patients') {
-            startCamera(); // Start video stream
+            startCamera();
 
-            // Set up countdown for camera active duration
             setCountdown(EMOTION_DETECTION_DURATION / 1000);
             countdownIntervalRef.current = setInterval(() => {
                 setCountdown(prev => Math.max(0, prev - 1));
             }, 1000);
 
-            // Set a timeout to stop camera and clear intervals after EMOTION_DETECTION_DURATION
             const timer = setTimeout(() => {
-                stopCamera(); // Stop camera
+                stopCamera();
                 if (detectionIntervalRef.current) {
                     clearInterval(detectionIntervalRef.current);
                 }
                 if (countdownIntervalRef.current) {
                     clearInterval(countdownIntervalRef.current);
                 }
-                // Reset cooldown refs when the camera session ends
                 lastAlertTimestampRef.current = 0;
                 currentNegativeEmotionRef.current = null;
+
+                // Redirect to a new link after countdown is 0
+                router.push('/caresight-verse/dashboard'); // Replace '/dashboard' with your desired redirection path
             }, EMOTION_DETECTION_DURATION);
 
-            // Add event listener to video element to start face detection once video plays
             if (videoRef.current) {
                 videoRef.current.addEventListener('play', () => {
                     if (!detectionIntervalRef.current) {
-                        // Start emotion detection at a regular interval (e.g., every 100ms)
                         detectionIntervalRef.current = setInterval(detectEmotions, 100);
                     }
-                }, { once: true }); // 'once: true' ensures this listener fires only once
+                }, { once: true });
             }
 
-            // Cleanup function: runs when component unmounts or dependencies change
             return () => {
-                clearTimeout(timer); // Clear the camera stop timer
-                stopCamera(); // Ensure camera is stopped
+                clearTimeout(timer);
+                stopCamera();
             };
         } else if (!loading && !isPatientDetailsLoading && (!currentUserId || currentUserRole !== 'patients')) {
-             setError("Please log in as a Patient to use the emotion detection feature.");
+            setError("Please log in as a Patient to use the emotion detection feature.");
         }
-    }, [loading, error, currentUserId, currentUserRole, currentPatientHospitalId, currentPatientNurseIds, isPatientDetailsLoading, startCamera, stopCamera, detectEmotions]);
+    }, [loading, error, currentUserId, currentUserRole, currentPatientHospitalId, currentPatientNurseIds, isPatientDetailsLoading, startCamera, stopCamera, detectEmotions, router]); // Add router to dependencies
 
     // --- Render Logic (Tailwind CSS) ---
     if (loading) {
