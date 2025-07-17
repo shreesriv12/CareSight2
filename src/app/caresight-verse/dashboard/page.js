@@ -2,15 +2,23 @@
 
 import { useEffect, useRef, useState } from 'react';
 import * as faceapi from 'face-api.js';
+import { createClient } from '@/lib/supabaseClient';
+
 
 export default function EyeGazeControlPage() {
+  
+
+const supabase = createClient();
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const overlayCanvasRef = useRef(null);
   const gazeStartTimeRef = useRef(null);
+  const [loading, setLoading] = useState(true);
+
   const lastGazedButtonRef = useRef(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [gazeDirection, setGazeDirection] = useState({ x: 0.5, y: 0.5 });
+  const [patientData, setPatientData] = useState(null);
   const [selectedButton, setSelectedButton] = useState(null);
   const [gazeProgress, setGazeProgress] = useState(0);
   const [isCalibrating, setIsCalibrating] = useState(false);
@@ -85,7 +93,42 @@ export default function EyeGazeControlPage() {
     { id: 'section1-action', label: 'Section 1 Action', icon: '🔧', color: 'bg-teal-500' },
     { id: 'section2-action', label: 'Section 2 Action', icon: '⚙️', color: 'bg-cyan-500' },
   ];
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const userId = localStorage.getItem('user_id');
+      if (!userId) {
+        setError('User ID not found in localStorage');
+        setLoading(false);
+        return;
+      }
 
+      const { data: patient, error: patientError } = await supabase
+        .from('patients')
+        .select('*')
+        .eq('id', userId) // or 'user_id' depending on schema
+        .single();
+
+      if (patientError || !patient) {
+        throw new Error(`Patient data not found: ${patientError?.message || 'Unknown error'}`);
+      }
+
+      setPatientData(patient);
+      console.log('✅ Patient data loaded:', patient);
+
+    } catch (err) {
+      console.error('❌ Fetch patient error:', err.message);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchData();
+}, [supabase]);
+
+
+        
   useEffect(() => {
     loadModels();
   }, []);
@@ -408,6 +451,7 @@ const checkEmotionAlerts = (emotion, confidence, stability = 0) => {
     handleGazeTracking(foundButton);
   };
 
+
   const handleGazeTracking = (currentButton) => {
     const now = Date.now();
 
@@ -506,60 +550,271 @@ const checkEmotionAlerts = (emotion, confidence, stability = 0) => {
     }, 3000);
   };
 
-  const handleNurseCall = async () => {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      showNotification('✅ Nurse has been notified!', 'success');
-    } catch (error) {
-      showNotification('❌ Failed to contact nurse', 'error');
-    }
-  };
+  // const handleNurseCall = async () => {
+  //   try {
+  //     await new Promise((resolve) => setTimeout(resolve, 500));
+  //     showNotification('✅ Nurse has been notified!', 'success');
+  //   } catch (error) {
+  //     showNotification('❌ Failed to contact nurse', 'error');
+  //   }
+  // };
 
-  const handleWaterRequest = async () => {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      showNotification('💧 Water request sent to staff!', 'success');
-    } catch (error) {
-      showNotification('❌ Failed to send water request', 'error');
+const handleNurseCall = async () => {
+ 
+  try {
+   
+    await new Promise((resolve) => setTimeout(resolve, 300));
+   
+
+    // 👇 Insert into Supabase alert table
+    const nurseId = Array.isArray(patientData.assigned_nurse_ids)
+  ? patientData.assigned_nurse_ids[0]
+  : patientData.assigned_nurse_ids;
+    const { error } = await supabase.from('alert').insert([
+      
+      {
+        name: 'Nurse Call',
+        patient_id: patientData.id,         // assuming you have this
+        nurse_id: nurseId,     // assuming you have this
+        hospital_id: patientData.hospital_id, // assuming you have this
+        status: 'Sent', // or your enum value
+        seen: 'No',
+        createdat: new Date().toISOString(),
+      },
+    ]);
+
+    if (error) {
+      console.error('Supabase alert insert error:', error);
+      showNotification('❌ Failed to NURSE CALL request', 'error');
+      return;
     }
-  };
+
+    showNotification('nurse call request sent to staff!', 'success');
+  } catch (error) {
+    console.error('handlenurse call error:', error);
+    showNotification('❌ Failed to send nurse call request', 'error');
+  }
+};
+  
+
+
+
+const handleWaterRequest = async () => {
+ 
+  try {
+   
+    await new Promise((resolve) => setTimeout(resolve, 300));
+   
+
+    // 👇 Insert into Supabase alert table
+    const nurseId = Array.isArray(patientData.assigned_nurse_ids)
+  ? patientData.assigned_nurse_ids[0]
+  : patientData.assigned_nurse_ids;
+    const { error } = await supabase.from('alert').insert([
+      
+      {
+        name: 'Water Request',
+        patient_id: patientData.id,         // assuming you have this
+        nurse_id: nurseId,     // assuming you have this
+        hospital_id: patientData.hospital_id, // assuming you have this
+        status: 'Sent', // or your enum value
+        seen: 'No',
+        createdat: new Date().toISOString(),
+      },
+    ]);
+
+    if (error) {
+      console.error('Supabase alert insert error:', error);
+      showNotification('❌ Failed to send water request', 'error');
+      return;
+    }
+
+    showNotification('💧 Water request sent to staff!', 'success');
+  } catch (error) {
+    console.error('handleWaterRequest error:', error);
+    showNotification('❌ Failed to send water request', 'error');
+  }
+};
+  
+
 
   const handleFoodRequest = async () => {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      showNotification('🍽️ Food request sent to kitchen!', 'success');
-    } catch (error) {
-      showNotification('❌ Failed to send food request', 'error');
-    }
-  };
+ 
+  try {
+   
+    await new Promise((resolve) => setTimeout(resolve, 300));
+   
 
-  const handlePainReport = async () => {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      const emotionContext = currentEmotion ? ` (detected emotion: ${currentEmotion})` : '';
-      showNotification(`😣 Pain reported to medical staff!${emotionContext}`, 'success');
-    } catch (error) {
-      showNotification('❌ Failed to report pain', 'error');
+    // 👇 Insert into Supabase alert table
+    const nurseId = Array.isArray(patientData.assigned_nurse_ids)
+  ? patientData.assigned_nurse_ids[0]
+  : patientData.assigned_nurse_ids;
+    const { error } = await supabase.from('alert').insert([
+      
+      {
+        name: 'Food Request',
+        patient_id: patientData.id,         // assuming you have this
+        nurse_id: nurseId,     // assuming you have this
+        hospital_id: patientData.hospital_id, // assuming you have this
+        status: 'Sent', // or your enum value
+        seen: 'No',
+        createdat: new Date().toISOString(),
+      },
+    ]);
+
+    if (error) {
+      console.error('Supabase alert insert error:', error);
+      showNotification('❌ Failed to send food request', 'error');
+      return;
     }
-  };
+
+    showNotification('💧 food request sent to staff!', 'success');
+  } catch (error) {
+    console.error('handlFoodRequst error:', error);
+    showNotification('❌ Failed to send food request', 'error');
+  }
+};
+  
+
+  // const handlePainReport = async () => {
+  //   try {
+  //     await new Promise((resolve) => setTimeout(resolve, 300));
+  //     const emotionContext = currentEmotion ? ` (detected emotion: ${currentEmotion})` : '';
+  //     showNotification(`😣 Pain reported to medical staff!${emotionContext}`, 'success');
+  //   } catch (error) {
+  //     showNotification('❌ Failed to report pain', 'error');
+  //   }
+  // };
+  const handlePainReport = async () => {
+ 
+  try {
+   
+    await new Promise((resolve) => setTimeout(resolve, 300));
+   
+
+    // 👇 Insert into Supabase alert table
+    const nurseId = Array.isArray(patientData.assigned_nurse_ids)
+  ? patientData.assigned_nurse_ids[0]
+  : patientData.assigned_nurse_ids;
+    const { error } = await supabase.from('alert').insert([
+      
+      {
+        name: 'pain report',
+        patient_id: patientData.id,         // assuming you have this
+        nurse_id: nurseId,     // assuming you have this
+        hospital_id: patientData.hospital_id, // assuming you have this
+        status: 'Sent', // or your enum value
+        seen: 'No',
+        createdat: new Date().toISOString(),
+      },
+    ]);
+
+    if (error) {
+      console.error('Supabase alert insert error:', error);
+      showNotification('❌ Failed to send pain report', 'error');
+      return;
+    }
+
+    showNotification(' pain report sent to staff!', 'success');
+  } catch (error) {
+    console.error('handlepanreport error:', error);
+    showNotification('❌ Failed to send pain report', 'error');
+  }
+};
+  
+
+  // const handleBathroomRequest = async () => {
+  //   try {
+  //     await new Promise((resolve) => setTimeout(resolve, 300));
+  //     showNotification('🚽 Bathroom assistance requested!', 'success');
+  //   } catch (error) {
+  //     showNotification('❌ Failed to request assistance', 'error');
+  //   }
+  // };
 
   const handleBathroomRequest = async () => {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      showNotification('🚽 Bathroom assistance requested!', 'success');
-    } catch (error) {
-      showNotification('❌ Failed to request assistance', 'error');
-    }
-  };
+ 
+  try {
+   
+    await new Promise((resolve) => setTimeout(resolve, 300));
+   
 
-  const handleTVControl = async () => {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      showNotification('📺 TV controls activated!', 'success');
-    } catch (error) {
-      showNotification('❌ Failed to control TV', 'error');
+    // 👇 Insert into Supabase alert table
+    const nurseId = Array.isArray(patientData.assigned_nurse_ids)
+  ? patientData.assigned_nurse_ids[0]
+  : patientData.assigned_nurse_ids;
+    const { error } = await supabase.from('alert').insert([
+      
+      {
+        name: 'Bathroom Request',
+        patient_id: patientData.id,         // assuming you have this
+        nurse_id: nurseId,     // assuming you have this
+        hospital_id: patientData.hospital_id, // assuming you have this
+        status: 'Sent', // or your enum value
+        seen: 'No',
+        createdat: new Date().toISOString(),
+      },
+    ]);
+
+    if (error) {
+      console.error('Supabase alert insert error:', error);
+      showNotification('❌ Failed to send bathroom request', 'error');
+      return;
     }
-  };
+
+    showNotification(' bathroom request sent to staff!', 'success');
+  } catch (error) {
+    console.error('handlebathroomRequest error:', error);
+    showNotification('❌ Failed to send bathroom request', 'error');
+  }
+};
+  
+
+  // const handleTVControl = async () => {
+  //   try {
+  //     await new Promise((resolve) => setTimeout(resolve, 300));
+  //     showNotification('📺 TV controls activated!', 'success');
+  //   } catch (error) {
+  //     showNotification('❌ Failed to control TV', 'error');
+  //   }
+  // };
+  const handleTVControl = async () => {
+ 
+  try {
+   
+    await new Promise((resolve) => setTimeout(resolve, 300));
+   
+
+    // 👇 Insert into Supabase alert table
+    const nurseId = Array.isArray(patientData.assigned_nurse_ids)
+  ? patientData.assigned_nurse_ids[0]
+  : patientData.assigned_nurse_ids;
+    const { error } = await supabase.from('alert').insert([
+      
+      {
+        name: 'TV control Request',
+        patient_id: patientData.id,         // assuming you have this
+        nurse_id: nurseId,     // assuming you have this
+        hospital_id: patientData.hospital_id, // assuming you have this
+        status: 'Sent', // or your enum value
+        seen: 'No',
+        createdat: new Date().toISOString(),
+      },
+    ]);
+
+    if (error) {
+      console.error('Supabase alert insert error:', error);
+      showNotification('❌ Failed to send TV control request', 'error');
+      return;
+    }
+
+    showNotification('TV control request sent to staff!', 'success');
+  } catch (error) {
+    console.error('handleTVcontrolRequest error:', error);
+    showNotification('❌ Failed to send TV control request', 'error');
+  }
+};
+  
 
   const handleScrollUp = () => {
     window.scrollBy({

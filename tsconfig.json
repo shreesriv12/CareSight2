@@ -22,6 +22,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/app/Authform.jsx", "src/app/dashboard/hospital/page.jsx"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/app/Authform.jsx", "src/app/dashboard/hospital/page.jsx", "src/app/caresight-verse/dashboard/page.js"],
   "exclude": ["node_modules"]
 }
