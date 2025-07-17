@@ -11,6 +11,7 @@ import {
   Trash2,
   Plus,
   AlertCircle,
+  Heart,
 } from 'lucide-react';
 
 const PatientDashboard: React.FC = () => {
@@ -160,6 +161,10 @@ const handleDeleteFamily = async (index: number) => {
   }
 };
 
+  const handleCaresightRedirect = () => {
+    // You can change this URL to your actual Caresight page
+    window.location.href = '/caresight-verse';
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -188,12 +193,21 @@ const handleDeleteFamily = async (index: number) => {
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-800">Patient Dashboard</h1>
-          <button
-            onClick={handleLogout}
-            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-          >
-            Logout
-          </button>
+          <div className="flex space-x-3">
+            <button
+              onClick={handleCaresightRedirect}
+              className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-2 rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all duration-200 flex items-center space-x-2 shadow-lg"
+            >
+              <Heart className="h-4 w-4" />
+              <span>Enter the Verse of Caresight</span>
+            </button>
+            <button
+              onClick={handleLogout}
+              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
         {/* Hospital Info */}
@@ -359,8 +373,6 @@ const handleDeleteFamily = async (index: number) => {
     </>
   )}
 </div>
-
-
 
         </div>
       </div>

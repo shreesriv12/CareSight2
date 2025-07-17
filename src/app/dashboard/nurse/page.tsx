@@ -11,6 +11,11 @@ import {
   Pill,
   Building2,
   Calendar,
+  Plus,
+  Edit,
+  Trash2,
+  Save,
+  X,
 } from 'lucide-react';
 
 type Nurse = {
@@ -46,9 +51,18 @@ type Patient = {
 type Medication = {
   id: string;
   patient_id: string;
-  medicine_name: string;
+  name: string;
+  dosage: any; // jsonb type
+  createdat?: string;
+  updatedat?: string;
+};
+
+type MedicationForm = {
+  name: string;
   dosage: string;
+  frequency: string;
   timing: string;
+  instructions: string;
 };
 
 const NurseDashboard: React.FC = () => {
@@ -58,6 +72,18 @@ const NurseDashboard: React.FC = () => {
   const [medications, setMedications] = useState<Record<string, Medication[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Medication management states
+  const [showMedicationForm, setShowMedicationForm] = useState<string | null>(null);
+  const [editingMedication, setEditingMedication] = useState<string | null>(null);
+  const [medicationForm, setMedicationForm] = useState<MedicationForm>({
+    name: '',
+    dosage: '',
+    frequency: '',
+    timing: '',
+    instructions: '',
+  });
+  const [medicationLoading, setMedicationLoading] = useState(false);
 
   const supabase = createClient();
 
@@ -83,28 +109,11 @@ const NurseDashboard: React.FC = () => {
         }
 
         // 1. Fetch nurse data
-        // const { data: nurse, error: nurseError } = await supabase
-        //   .from('nurse')
-        //   .select('*')
-        //   .eq('auth_user_id', userId)
-        //   .single();
-
-        const handleLogout = async () => {
-  try {
-    await supabase.auth.signOut();
-    localStorage.removeItem('user_id');
-    localStorage.removeItem('role');
-    window.location.href = '/'; // redirect to login or homepage
-  } catch (err) {
-    console.error('Logout failed:', err);
-  }
-};
-
-         const { data: nurse,error: nurseError } = await createClient()
-        .from('nurse')
-        .select('*')
-        .eq('id', userId)
-        .single();
+        const { data: nurse, error: nurseError } = await createClient()
+          .from('nurse')
+          .select('*')
+          .eq('id', userId)
+          .single();
 
         if (nurseError || !nurse) throw new Error('Nurse data not found.');
         setNurseData(nurse);
@@ -129,20 +138,7 @@ const NurseDashboard: React.FC = () => {
         setPatients(patientList || []);
 
         // 4. Fetch medications
-        const { data: meds, error: medError } = await supabase
-          .from('medication')
-          .select('*')
-          .in('patient_id', nurse.patient_ids || []);
-
-        if (medError) throw medError;
-
-        const medMap: Record<string, Medication[]> = {};
-        for (const med of meds || []) {
-          if (!medMap[med.patient_id]) medMap[med.patient_id] = [];
-          medMap[med.patient_id].push(med);
-        }
-
-        setMedications(medMap);
+        await fetchMedications(nurse.patient_ids || []);
       } catch (err: any) {
         console.error('Error loading dashboard:', err);
         setError(err.message || 'Unexpected error');
@@ -153,6 +149,226 @@ const NurseDashboard: React.FC = () => {
 
     fetchData();
   }, []);
+
+  const fetchMedications = async (patientIds: string[]) => {
+    try {
+      const { data: meds, error: medError } = await supabase
+        .from('medication')
+        .select('*')
+        .in('patient_id', patientIds);
+
+      if (medError) throw medError;
+
+      const medMap: Record<string, Medication[]> = {};
+      for (const med of meds || []) {
+        if (!medMap[med.patient_id]) medMap[med.patient_id] = [];
+        medMap[med.patient_id].push(med);
+      }
+
+      setMedications(medMap);
+    } catch (err) {
+      console.error('Error fetching medications:', err);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      localStorage.removeItem('user_id');
+      localStorage.removeItem('role');
+      window.location.href = '/';
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
+  };
+
+  const resetMedicationForm = () => {
+    setMedicationForm({
+      name: '',
+      dosage: '',
+      frequency: '',
+      timing: '',
+      instructions: '',
+    });
+    setShowMedicationForm(null);
+    setEditingMedication(null);
+  };
+
+  const handleAddMedication = async (patientId: string) => {
+    if (!medicationForm.name || !medicationForm.dosage) {
+      alert('Please fill in medication name and dosage');
+      return;
+    }
+
+    setMedicationLoading(true);
+    try {
+      const dosageData = {
+        amount: medicationForm.dosage,
+        frequency: medicationForm.frequency,
+        timing: medicationForm.timing,
+        instructions: medicationForm.instructions,
+      };
+
+      const { data, error } = await supabase
+        .from('medication')
+        .insert([
+          {
+            patient_id: patientId,
+            name: medicationForm.name,
+            dosage: dosageData,
+          },
+        ])
+        .select();
+
+      if (error) throw error;
+
+      // Refresh medications
+      await fetchMedications(nurseData?.patient_ids || []);
+      resetMedicationForm();
+      alert('Medication added successfully');
+    } catch (err: any) {
+      console.error('Error adding medication:', err);
+      alert('Failed to add medication: ' + err.message);
+    } finally {
+      setMedicationLoading(false);
+    }
+  };
+
+  const handleEditMedication = (medication: Medication) => {
+    const dosageData = medication.dosage || {};
+    setMedicationForm({
+      name: medication.name,
+      dosage: dosageData.amount || '',
+      frequency: dosageData.frequency || '',
+      timing: dosageData.timing || '',
+      instructions: dosageData.instructions || '',
+    });
+    setEditingMedication(medication.id);
+    setShowMedicationForm(medication.patient_id);
+  };
+
+  const handleUpdateMedication = async (patientId: string) => {
+    if (!medicationForm.name || !medicationForm.dosage) {
+      alert('Please fill in medication name and dosage');
+      return;
+    }
+
+    setMedicationLoading(true);
+    try {
+      const dosageData = {
+        amount: medicationForm.dosage,
+        frequency: medicationForm.frequency,
+        timing: medicationForm.timing,
+        instructions: medicationForm.instructions,
+      };
+
+      const { error } = await supabase
+        .from('medication')
+        .update({
+          name: medicationForm.name,
+          dosage: dosageData,
+          updatedat: new Date().toISOString(),
+        })
+        .eq('id', editingMedication);
+
+      if (error) throw error;
+
+      // Refresh medications
+      await fetchMedications(nurseData?.patient_ids || []);
+      resetMedicationForm();
+      alert('Medication updated successfully');
+    } catch (err: any) {
+      console.error('Error updating medication:', err);
+      alert('Failed to update medication: ' + err.message);
+    } finally {
+      setMedicationLoading(false);
+    }
+  };
+
+  const handleDeleteMedication = async (medicationId: string) => {
+    if (!confirm('Are you sure you want to delete this medication?')) return;
+
+    setMedicationLoading(true);
+    try {
+      const { error } = await supabase
+        .from('medication')
+        .delete()
+        .eq('id', medicationId);
+
+      if (error) throw error;
+
+      // Refresh medications
+      await fetchMedications(nurseData?.patient_ids || []);
+      alert('Medication deleted successfully');
+    } catch (err: any) {
+      console.error('Error deleting medication:', err);
+      alert('Failed to delete medication: ' + err.message);
+    } finally {
+      setMedicationLoading(false);
+    }
+  };
+
+  const MedicationForm = ({ patientId }: { patientId: string }) => (
+    <div className="bg-gray-50 p-4 rounded-lg mt-3">
+      <h6 className="text-sm font-semibold text-gray-700 mb-3">
+        {editingMedication ? 'Edit Medication' : 'Add New Medication'}
+      </h6>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <input
+          type="text"
+          placeholder="Medication name"
+          value={medicationForm.name}
+          onChange={(e) => setMedicationForm({ ...medicationForm, name: e.target.value })}
+          className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <input
+          type="text"
+          placeholder="Dosage (e.g., 500mg)"
+          value={medicationForm.dosage}
+          onChange={(e) => setMedicationForm({ ...medicationForm, dosage: e.target.value })}
+          className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <input
+          type="text"
+          placeholder="Frequency (e.g., 3 times daily)"
+          value={medicationForm.frequency}
+          onChange={(e) => setMedicationForm({ ...medicationForm, frequency: e.target.value })}
+          className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <input
+          type="text"
+          placeholder="Timing (e.g., after meals)"
+          value={medicationForm.timing}
+          onChange={(e) => setMedicationForm({ ...medicationForm, timing: e.target.value })}
+          className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <textarea
+          placeholder="Special instructions"
+          value={medicationForm.instructions}
+          onChange={(e) => setMedicationForm({ ...medicationForm, instructions: e.target.value })}
+          className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2"
+          rows={2}
+        />
+      </div>
+      <div className="flex gap-2 mt-3">
+        <button
+          onClick={() => editingMedication ? handleUpdateMedication(patientId) : handleAddMedication(patientId)}
+          disabled={medicationLoading}
+          className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 disabled:bg-gray-400 flex items-center gap-2"
+        >
+          <Save className="h-4 w-4" />
+          {medicationLoading ? 'Saving...' : (editingMedication ? 'Update' : 'Add')}
+        </button>
+        <button
+          onClick={resetMedicationForm}
+          className="bg-gray-500 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-600 flex items-center gap-2"
+        >
+          <X className="h-4 w-4" />
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -177,17 +393,12 @@ const NurseDashboard: React.FC = () => {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-800">Nurse Dashboard</h1>
           <button
-            onClick={() => {
-              localStorage.removeItem('user_id');
-              localStorage.removeItem('role');
-              window.location.href = '/'; // Redirect to login or homepage
-            }}
+            onClick={handleLogout}
             className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
           >
             Logout
           </button>
         </div>
-
 
         {/* Hospital Info */}
         {hospitalData && (
@@ -224,8 +435,6 @@ const NurseDashboard: React.FC = () => {
           </div>
         )}
 
-        
-
         {/* Patients */}
         <div className="bg-white shadow p-6 rounded-lg">
           <h3 className="text-xl font-semibold mb-4 text-gray-800">
@@ -250,22 +459,75 @@ const NurseDashboard: React.FC = () => {
                 </p>
                 <p className="text-sm text-gray-600">Diagnosis: {patient.diagnosis}</p>
 
-                {/* Medications */}
-                <div className="mt-2">
-                  <h5 className="text-sm font-semibold text-gray-700 mb-1 flex items-center">
-                    <Pill className="h-4 w-4 mr-1" />
-                    Medications
-                  </h5>
+                {/* Medications Section */}
+                <div className="mt-4 bg-gray-50 p-4 rounded-lg">
+                  <div className="flex items-center justify-between mb-3">
+                    <h5 className="text-sm font-semibold text-gray-700 flex items-center">
+                      <Pill className="h-4 w-4 mr-1" />
+                      Medications ({medications[patient.id]?.length || 0})
+                    </h5>
+                    <button
+                      onClick={() => setShowMedicationForm(showMedicationForm === patient.id ? null : patient.id)}
+                      className="bg-green-600 text-white px-3 py-1 rounded-md text-sm hover:bg-green-700 flex items-center gap-1"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Medication
+                    </button>
+                  </div>
+
+                  {/* Medication List */}
                   {medications[patient.id]?.length ? (
-                    <ul className="list-disc list-inside text-sm text-gray-600 space-y-1">
-                      {medications[patient.id].map((med) => (
-                        <li key={med.id}>
-                          {med.medicine_name} - {med.dosage} - {med.timing}
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="space-y-2">
+                      {medications[patient.id].map((med) => {
+                        const dosageData = med.dosage || {};
+                        return (
+                          <div key={med.id} className="bg-white p-3 rounded border flex items-start justify-between">
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-800">{med.name}</p>
+                              <p className="text-sm text-gray-600">
+                                <strong>Dosage:</strong> {dosageData.amount || 'Not specified'}
+                              </p>
+                              {dosageData.frequency && (
+                                <p className="text-sm text-gray-600">
+                                  <strong>Frequency:</strong> {dosageData.frequency}
+                                </p>
+                              )}
+                              {dosageData.timing && (
+                                <p className="text-sm text-gray-600">
+                                  <strong>Timing:</strong> {dosageData.timing}
+                                </p>
+                              )}
+                              {dosageData.instructions && (
+                                <p className="text-sm text-gray-600">
+                                  <strong>Instructions:</strong> {dosageData.instructions}
+                                </p>
+                              )}
+                            </div>
+                            <div className="flex gap-2 ml-4">
+                              <button
+                                onClick={() => handleEditMedication(med)}
+                                className="text-blue-600 hover:text-blue-800"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteMedication(med.id)}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   ) : (
                     <p className="text-sm text-gray-500">No medications assigned</p>
+                  )}
+
+                  {/* Medication Form */}
+                  {showMedicationForm === patient.id && (
+                    <MedicationForm patientId={patient.id} />
                   )}
                 </div>
               </div>
