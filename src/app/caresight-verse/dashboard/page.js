@@ -159,14 +159,22 @@ useEffect(() => {
     }
   };
 
+  // !REF for patientData
+  const patientDataRef = useRef(null);
+  useEffect(() => {
+    patientDataRef.current = patientData;
+  }, [patientData]);
+
   const startVideo = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: 640, height: 480 },
       });
       if (videoRef.current) {
+        // Pause before changing srcObject to avoid AbortError
+        videoRef.current.pause();
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        await videoRef.current.play();
       }
     } catch (error) {
       console.error('Error accessing camera:', error);
@@ -560,23 +568,27 @@ const checkEmotionAlerts = (emotion, confidence, stability = 0) => {
   // };
 
 const handleNurseCall = async () => {
- 
+  const currentPatientData = patientDataRef.current;
+  if (!currentPatientData) {
+    showNotification('❌ Patient data not found', 'error');
+    return;
+  }
   try {
    
     await new Promise((resolve) => setTimeout(resolve, 300));
    
 
     // 👇 Insert into Supabase alert table
-    const nurseId = Array.isArray(patientData.assigned_nurse_ids)
-  ? patientData.assigned_nurse_ids[0]
-  : patientData.assigned_nurse_ids;
+    const nurseId = Array.isArray(currentPatientData.assigned_nurse_ids)
+  ? currentPatientData.assigned_nurse_ids[0]
+  : currentPatientData.assigned_nurse_ids;
     const { error } = await supabase.from('alert').insert([
       
       {
         name: 'Nurse Call',
-        patient_id: patientData.id,         // assuming you have this
+        patient_id: currentPatientData.id,         // assuming you have this
         nurse_id: nurseId,     // assuming you have this
-        hospital_id: patientData.hospital_id, // assuming you have this
+        hospital_id: currentPatientData.hospital_id, // assuming you have this
         status: 'Sent', // or your enum value
         seen: 'No',
         createdat: new Date().toISOString(),
@@ -600,23 +612,27 @@ const handleNurseCall = async () => {
 
 
 const handleWaterRequest = async () => {
- 
+  const currentPatientData = patientDataRef.current;
+  if (!currentPatientData) {
+    showNotification('❌ Patient data not found', 'error');
+    return;
+  }
   try {
    
     await new Promise((resolve) => setTimeout(resolve, 300));
    
 
     // 👇 Insert into Supabase alert table
-    const nurseId = Array.isArray(patientData.assigned_nurse_ids)
-  ? patientData.assigned_nurse_ids[0]
-  : patientData.assigned_nurse_ids;
+    const nurseId = Array.isArray(currentPatientData.assigned_nurse_ids)
+  ? currentPatientData.assigned_nurse_ids[0]
+  : currentPatientData.assigned_nurse_ids;
     const { error } = await supabase.from('alert').insert([
       
       {
         name: 'Water Request',
-        patient_id: patientData.id,         // assuming you have this
+        patient_id: currentPatientData.id,         // assuming you have this
         nurse_id: nurseId,     // assuming you have this
-        hospital_id: patientData.hospital_id, // assuming you have this
+        hospital_id: currentPatientData.hospital_id, // assuming you have this
         status: 'Sent', // or your enum value
         seen: 'No',
         createdat: new Date().toISOString(),
@@ -639,6 +655,11 @@ const handleWaterRequest = async () => {
 
 
   const handleFoodRequest = async () => {
+    const currentPatientData = patientDataRef.current;
+    if (!currentPatientData) {
+      showNotification('❌ Patient data not found', 'error');
+      return;
+    }
  
   try {
    
@@ -646,16 +667,16 @@ const handleWaterRequest = async () => {
    
 
     // 👇 Insert into Supabase alert table
-    const nurseId = Array.isArray(patientData.assigned_nurse_ids)
-  ? patientData.assigned_nurse_ids[0]
-  : patientData.assigned_nurse_ids;
+    const nurseId = Array.isArray(currentPatientData.assigned_nurse_ids)
+  ? currentPatientData.assigned_nurse_ids[0]
+  : currentPatientData.assigned_nurse_ids;
     const { error } = await supabase.from('alert').insert([
       
       {
         name: 'Food Request',
-        patient_id: patientData.id,         // assuming you have this
+        patient_id: currentPatientData.id,         // assuming you have this
         nurse_id: nurseId,     // assuming you have this
-        hospital_id: patientData.hospital_id, // assuming you have this
+        hospital_id: currentPatientData.hospital_id, // assuming you have this
         status: 'Sent', // or your enum value
         seen: 'No',
         createdat: new Date().toISOString(),
@@ -686,6 +707,11 @@ const handleWaterRequest = async () => {
   //   }
   // };
   const handlePainReport = async () => {
+    const currentPatientData = patientDataRef.current;
+    if (!currentPatientData) {
+      showNotification('❌ Patient data not found', 'error');
+      return;
+    }
  
   try {
    
@@ -693,16 +719,16 @@ const handleWaterRequest = async () => {
    
 
     // 👇 Insert into Supabase alert table
-    const nurseId = Array.isArray(patientData.assigned_nurse_ids)
-  ? patientData.assigned_nurse_ids[0]
-  : patientData.assigned_nurse_ids;
+    const nurseId = Array.isArray(currentPatientData.assigned_nurse_ids)
+  ? currentPatientData.assigned_nurse_ids[0]
+  : currentPatientData.assigned_nurse_ids;
     const { error } = await supabase.from('alert').insert([
       
       {
         name: 'pain report',
-        patient_id: patientData.id,         // assuming you have this
+        patient_id: currentPatientData.id,         // assuming you have this
         nurse_id: nurseId,     // assuming you have this
-        hospital_id: patientData.hospital_id, // assuming you have this
+        hospital_id: currentPatientData.hospital_id, // assuming you have this
         status: 'Sent', // or your enum value
         seen: 'No',
         createdat: new Date().toISOString(),
@@ -733,6 +759,11 @@ const handleWaterRequest = async () => {
   // };
 
   const handleBathroomRequest = async () => {
+    const currentPatientData = patientDataRef.current;
+    if (!currentPatientData) {
+      showNotification('❌ Patient data not found', 'error');
+      return;
+    }
  
   try {
    
@@ -740,16 +771,16 @@ const handleWaterRequest = async () => {
    
 
     // 👇 Insert into Supabase alert table
-    const nurseId = Array.isArray(patientData.assigned_nurse_ids)
-  ? patientData.assigned_nurse_ids[0]
-  : patientData.assigned_nurse_ids;
+    const nurseId = Array.isArray(currentPatientData.assigned_nurse_ids)
+  ? currentPatientData.assigned_nurse_ids[0]
+  : currentPatientData.assigned_nurse_ids;
     const { error } = await supabase.from('alert').insert([
       
       {
         name: 'Bathroom Request',
-        patient_id: patientData.id,         // assuming you have this
+        patient_id: currentPatientData.id,         // assuming you have this
         nurse_id: nurseId,     // assuming you have this
-        hospital_id: patientData.hospital_id, // assuming you have this
+        hospital_id: currentPatientData.hospital_id, // assuming you have this
         status: 'Sent', // or your enum value
         seen: 'No',
         createdat: new Date().toISOString(),
@@ -779,6 +810,11 @@ const handleWaterRequest = async () => {
   //   }
   // };
   const handleTVControl = async () => {
+    const currentPatientData = patientDataRef.current;
+    if (!currentPatientData) {
+      showNotification('❌ Patient data not found', 'error');
+      return;
+    }
  
   try {
    
@@ -786,16 +822,16 @@ const handleWaterRequest = async () => {
    
 
     // 👇 Insert into Supabase alert table
-    const nurseId = Array.isArray(patientData.assigned_nurse_ids)
-  ? patientData.assigned_nurse_ids[0]
-  : patientData.assigned_nurse_ids;
+    const nurseId = Array.isArray(currentPatientData.assigned_nurse_ids)
+  ? currentPatientData.assigned_nurse_ids[0]
+  : currentPatientData.assigned_nurse_ids;
     const { error } = await supabase.from('alert').insert([
       
       {
         name: 'TV control Request',
-        patient_id: patientData.id,         // assuming you have this
+        patient_id: currentPatientData.id,         // assuming you have this
         nurse_id: nurseId,     // assuming you have this
-        hospital_id: patientData.hospital_id, // assuming you have this
+        hospital_id: currentPatientData.hospital_id, // assuming you have this
         status: 'Sent', // or your enum value
         seen: 'No',
         createdat: new Date().toISOString(),
