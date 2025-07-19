@@ -44,6 +44,11 @@ const supabase = createClient();
     const [lastEmotionUpdate, setLastEmotionUpdate] = useState(0);
     const [isEmotionProcessing, setIsEmotionProcessing] = useState(false);
 
+    //entertainment
+    const [showEntertainmentOptions, setShowEntertainmentOptions] = useState(false);
+const [spotifyLink, setSpotifyLink] = useState("https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M");
+
+
     const EMOTION_DETECTION_DELAY = 2500; // 2.5 seconds delay
     const EMOTION_BUFFER_SIZE = 15; // Number of frames to buffer (25 frames = 2.5 seconds at 100ms intervals)
     const EMOTION_STABILITY_THRESHOLD = 0.6; // 60% of frames must have the same emotion
@@ -88,11 +93,12 @@ const supabase = createClient();
     { id: 'pain', label: 'Pain', icon: '😣', color: 'bg-orange-500' },
     { id: 'bathroom', label: 'Bathroom', icon: '🚽', color: 'bg-purple-500' },
     { id: 'tv', label: 'TV Control', icon: '📺', color: 'bg-gray-500' },
+    {id: 'entertainment',label: 'Entertainment',icon: '🎭',color: 'bg-yellow-500'},
     { id: 'scroll-up', label: 'Scroll Up', icon: '⬆️', color: 'bg-indigo-500' },
     { id: 'scroll-down', label: 'Scroll Down', icon: '⬇️', color: 'bg-indigo-500' },
     { id: 'section1-action', label: 'Section 1 Action', icon: '🔧', color: 'bg-teal-500' },
-    { id: 'section2-action', label: 'Section 2 Action', icon: '⚙️', color: 'bg-cyan-500' },
-  ];
+    { id: 'section2-action', label: 'Section 2 Action', icon: '⚙️', color: 'bg-cyan-500' }];
+
 useEffect(() => {
   const fetchData = async () => {
     try {
@@ -542,6 +548,9 @@ const checkEmotionAlerts = (emotion, confidence, stability = 0) => {
       case 'section2-action':
         await handleSection2Action();
         break;
+         case 'entertainment':
+      setShowEntertainmentOptions(true);
+      break;
       default:
         break;
     }
@@ -1210,12 +1219,125 @@ const handleWaterRequest = async () => {
             </div>
 
           </div>
+{showEntertainmentOptions && (
+  <div className="my-6 p-6 bg-gradient-to-br from-purple-50 to-indigo-100 rounded-2xl shadow-xl border border-purple-200">
+    <h2 className="text-2xl text-gray-800 font-bold mb-6 text-center bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text ">
+      🎭 Entertainment Hub
+    </h2>
+     
+    {/* YouTube Section */}
+    <div className="mb-8 bg-white rounded-xl p-5 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+      <h3 className="text-xl text-gray-800 font-bold mb-4 flex items-center gap-2">
+        🎬 <span className="bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">Movies</span>
+      </h3>
+      <div className="overflow-x-auto overflow-y-hidden scrollbar-hide">
+        <div className="flex gap-4 pb-2">
+          <div className="flex-shrink-0 relative overflow-hidden rounded-xl shadow-md">
+            <iframe
+              width="400"
+              height="225"
+              src="https://www.youtube.com/embed/tgbNymZ7vqY"
+              title="YouTube Movie 1"
+              allowFullScreen
+              className="rounded-xl border-0"
+            />
+          </div>
+          <div className="flex-shrink-0 relative overflow-hidden rounded-xl shadow-md">
+            <iframe
+              width="400"
+              height="225"
+              src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+              title="YouTube Movie 2"
+              allowFullScreen
+              className="rounded-xl border-0"
+            />
+          </div>
+          <div className="flex-shrink-0 relative overflow-hidden rounded-xl shadow-md">
+            <iframe
+              width="400"
+              height="225"
+              src="https://www.youtube.com/embed/9bZkp7q19f0"
+              title="YouTube Movie 3"
+              allowFullScreen
+              className="rounded-xl border-0"
+            />
+          </div>
+          <div className="flex-shrink-0 relative overflow-hidden rounded-xl shadow-md">
+            <iframe
+              width="400"
+              height="225"
+              src="https://www.youtube.com/embed/kJQP7kiw5Fk"
+              title="YouTube Movie 4"
+              allowFullScreen
+              className="rounded-xl border-0"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+     
+    {/* Spotify Section */}
+    <div className="bg-white rounded-xl p-5 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+      <h3 className="text-xl text-gray-800 font-bold mb-4 flex items-center gap-2">
+        🎵 <span className="bg-gradient-to-r from-green-500 to-emerald-500 bg-clip-text text-transparent">Music</span>
+      </h3>
+      
+      {/* Single Spotify Player */}
+      <div className="relative overflow-hidden rounded-xl shadow-md mb-4">
+        <iframe
+          style={{ borderRadius: "12px" }}
+          src={spotifyLink}
+          width="100%"
+          height="152"
+          allow="encrypted-media"
+          allowFullScreen
+          className="border-0"
+        />
+      </div>
+      
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap gap-3 justify-center">
+          {[
+            { name: 'Arijit Singh', link: 'https://open.spotify.com/embed/artist/4YRxDV8wJFPHPTeXepOstw' },
+            { name: 'Lata Mangeshkar', link: 'https://open.spotify.com/embed/artist/2Yy3eGqvHguKx2cV1xUHi3' },
+            { name: 'A.R. Rahman', link: 'https://open.spotify.com/embed/artist/1mYsTxnqsietFxj1OgoGbG' },
+            { name: 'Shreya Ghoshal', link: 'https://open.spotify.com/embed/artist/0oOet2f43PA68X5RxKobEy' },
+            { name: 'Kishore Kumar', link: 'https://open.spotify.com/embed/artist/3ZztOxur7Gw8pPjZnoNJ8a' },
+            { name: 'Rahat Fateh Ali Khan', link: 'https://open.spotify.com/embed/artist/2FKWNmZWDBZR4dE5KX4plR' },
+            { name: 'Sonu Nigam', link: 'https://open.spotify.com/embed/artist/25uiPmTg16RbhZWAqwLBy5' },
+            { name: 'Udit Narayan', link: 'https://open.spotify.com/embed/artist/70B80Lwx2sxti0M1Ng9e8K' },
+            { name: 'Krishna Bhajan', link: 'https://open.spotify.com/embed/playlist/1MZEK0q8uxzfrWJuK1NB1Y' },
+            { name: 'Bollywood Hits', link: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0XUsuxWHRQd' }
+          ].map((artist) => (
+            <button
+              key={artist.name}
+              className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-medium rounded-full shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-50"
+              onClick={() => setSpotifyLink(artist.link)}
+            >
+              {artist.name}
+            </button>                   
+          ))}
+        </div>
+        <div className="flex justify-center">
+          <button
+          
+            onClick={() => setShowEntertainmentOptions(false)}
+            className="bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-medium px-6 py-3 rounded-full shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-50 flex items-center gap-2"
+          >
+            ⬅️ Back to Menu
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
 
           {/* Control Buttons */}
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Controls</h2>
             <div className="grid grid-cols-2 gap-4">
-              {buttons.slice(0, 6).map((button) => (
+              {buttons.slice(0, 7).map((button) => (
                 <button
                   key={button.id}
                   className={`gaze-button relative p-6 rounded-lg text-white font-semibold transition-all duration-200 ${
@@ -1250,7 +1372,7 @@ const handleWaterRequest = async () => {
 
         {/* Fixed Scroll Buttons */}
         <div className="fixed top-1/2 left-4 transform -translate-y-1/2 z-50 flex flex-col space-y-4">
-          {buttons.slice(6, 8).map((button) => (
+          {buttons.slice(7, 9).map((button) => (
             <button
               key={button.id}
               className={`gaze-button relative p-4 rounded-lg text-white font-semibold transition-all duration-200 ${
