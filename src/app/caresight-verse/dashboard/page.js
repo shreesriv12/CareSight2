@@ -3,12 +3,50 @@
 import { useEffect, useRef, useState } from 'react';
 import * as faceapi from 'face-api.js';
 import { createClient } from '@/lib/supabaseClient';
-
+import { animateScroll as scroll } from 'react-scroll';
 
 export default function EyeGazeControlPage() {
+  // YouTube gaze states
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const [isYouTubePlaying, setIsYouTubePlaying] = useState(false);
+//   const [youtubeIframe, setYoutubeIframe] = useState(null);
+  const youTubeVideos = [
+    { 
+      id: "tgbNymZ7vqY",
+      title: "Movie 1" 
+    },
+    { 
+      id: "dQw4w9WgXcQ",
+      title: "Movie 2" 
+    },
+    { 
+      id: "9bZkp7q19f0",
+      title: "Movie 3" 
+    },
+    { 
+      id: "kJQP7kiw5Fk",
+      title: "Movie 4" 
+    }
+  ];
   
+  //   !
+  const generateYouTubeURL = (videoId, isPlaying) => {
+      if (isPlaying) {
+          return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=1&controls=1&rel=0&mute=1`;
+        } else {
+            return `https://www.youtube.com/embed/${videoId}?enablejsapi=1&autoplay=0&controls=1&rel=0&mute=0`;
+        }
+    };
+    
+    const [currentYouTubeVideo, setCurrentYouTubeVideo] = useState(
+        generateYouTubeURL(youTubeVideos[0]?.id, false)
+      );
+//   useEffect(() => {
+//     const iframe = document.getElementById('youtube-player');
+//     setYoutubeIframe(iframe);
+//   }, [currentYouTubeVideo]);
 
-const supabase = createClient();
+  const supabase = createClient();
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const overlayCanvasRef = useRef(null);
@@ -39,21 +77,18 @@ const supabase = createClient();
   const [showEmotionDetails, setShowEmotionDetails] = useState(false);
   const [emotionAlerts, setEmotionAlerts] = useState([]);
 
-//   !Add delay in emotion detection
-    const [emotionBuffer, setEmotionBuffer] = useState([]);
-    const [lastEmotionUpdate, setLastEmotionUpdate] = useState(0);
-    const [isEmotionProcessing, setIsEmotionProcessing] = useState(false);
+  // Add delay in emotion detection
+  const [emotionBuffer, setEmotionBuffer] = useState([]);
+  const [lastEmotionUpdate, setLastEmotionUpdate] = useState(0);
+  const [isEmotionProcessing, setIsEmotionProcessing] = useState(false);
 
-    //entertainment
-    const [showEntertainmentOptions, setShowEntertainmentOptions] = useState(false);
-const [spotifyLink, setSpotifyLink] = useState("https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M");
+  // Entertainment
+  const [showEntertainmentOptions, setShowEntertainmentOptions] = useState(false);
+  const [spotifyLink, setSpotifyLink] = useState("https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M");
 
-
-    const EMOTION_DETECTION_DELAY = 2500; // 2.5 seconds delay
-    const EMOTION_BUFFER_SIZE = 15; // Number of frames to buffer (25 frames = 2.5 seconds at 100ms intervals)
-    const EMOTION_STABILITY_THRESHOLD = 0.6; // 60% of frames must have the same emotion
-
-
+  const EMOTION_DETECTION_DELAY = 2500;
+  const EMOTION_BUFFER_SIZE = 15;
+  const EMOTION_STABILITY_THRESHOLD = 0.6;
   const GAZE_THRESHOLD = 2000;
   const EMOTION_HISTORY_LIMIT = 10;
   const EMOTION_CONFIDENCE_THRESHOLD = 0.3;
@@ -93,48 +128,60 @@ const [spotifyLink, setSpotifyLink] = useState("https://open.spotify.com/embed/p
     { id: 'pain', label: 'Pain', icon: '😣', color: 'bg-orange-500' },
     { id: 'bathroom', label: 'Bathroom', icon: '🚽', color: 'bg-purple-500' },
     { id: 'tv', label: 'TV Control', icon: '📺', color: 'bg-gray-500' },
-    {id: 'entertainment',label: 'Entertainment',icon: '🎭',color: 'bg-yellow-500'},
+    { id: 'entertainment', label: 'Entertainment', icon: '🎭', color: 'bg-yellow-500' },
     { id: 'scroll-up', label: 'Scroll Up', icon: '⬆️', color: 'bg-indigo-500' },
     { id: 'scroll-down', label: 'Scroll Down', icon: '⬇️', color: 'bg-indigo-500' },
-    { id: 'section1-action', label: 'Section 1 Action', icon: '🔧', color: 'bg-teal-500' },
-    { id: 'section2-action', label: 'Section 2 Action', icon: '⚙️', color: 'bg-cyan-500' }];
+    { id: 'arijit', name: 'Arijit Singh', link: 'https://open.spotify.com/embed/artist/4YRxDV8wJFPHPTeXepOstw', icon: '🎤', color: 'bg-gradient-to-r from-green-500 to-emerald-600' },
+    { id: 'lata', name: 'Lata Mangeshkar', link: 'https://open.spotify.com/embed/artist/2Yy3eGqvHguKx2cV1xUHi3', icon: '🎵', color: 'bg-gradient-to-r from-pink-500 to-rose-600' },
+    { id: 'rahman', name: 'A.R. Rahman', link: 'https://open.spotify.com/embed/artist/1mYsTxnqsietFxj1OgoGbG', icon: '🎹', color: 'bg-gradient-to-r from-blue-500 to-indigo-600' },
+    { id: 'shreya', name: 'Shreya Ghoshal', link: 'https://open.spotify.com/embed/artist/0oOet2f43PA68X5RxKobEy', icon: '🌟', color: 'bg-gradient-to-r from-purple-500 to-violet-600' },
+    { id: 'kishore', name: 'Kishore Kumar', link: 'https://open.spotify.com/embed/artist/3ZztOxur7Gw8pPjZnoNJ8a', icon: '🎭', color: 'bg-gradient-to-r from-orange-500 to-red-600' },
+    { id: 'rahat', name: 'Rahat Fateh Ali Khan', link: 'https://open.spotify.com/embed/artist/2FKWNmZWDBZR4dE5KX4plR', icon: '🕌', color: 'bg-gradient-to-r from-teal-500 to-cyan-600' },
+    { id: 'sonu', name: 'Sonu Nigam', link: 'https://open.spotify.com/embed/artist/25uiPmTg16RbhZWAqwLBy5', icon: '🎶', color: 'bg-gradient-to-r from-yellow-500 to-amber-600' },
+    { id: 'udit', name: 'Udit Narayan', link: 'https://open.spotify.com/embed/artist/70B80Lwx2sxti0M1Ng9e8K', icon: '🌅', color: 'bg-gradient-to-r from-emerald-500 to-green-600' },
+    { id: 'krishna', name: 'Krishna Bhajan', link: 'https://open.spotify.com/embed/playlist/1MZEK0q8uxzfrWJuK1NB1Y', icon: '🙏', color: 'bg-gradient-to-r from-indigo-500 to-purple-600' },
+    { id: 'bollywood', name: 'Bollywood Hits', link: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0XUsuxWHRQd', icon: '🎬', color: 'bg-gradient-to-r from-red-500 to-pink-600' },
+    { id: 'back-to-menu', label: 'Back to Menu', icon: '⬅️', color: 'bg-gradient-to-r from-red-500 to-pink-600' },
+    { id: 'youtube-prev', label: 'Previous Video', icon: '⏮️', color: 'bg-red-600' },
+    { id: 'youtube-play-pause', label: 'Play/Pause', icon: '⏯️', color: 'bg-green-600' },
+    { id: 'youtube-next', label: 'Next Video', icon: '⏭️', color: 'bg-red-600' },
+    { id: 'youtube-stop', label: 'Stop', icon: '⏹️', color: 'bg-gray-600' }
+  ];
 
-useEffect(() => {
-  const fetchData = async () => {
-    try {
-      const userId = localStorage.getItem('user_id');
-      if (!userId) {
-        setError('User ID not found in localStorage');
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const userId = localStorage.getItem('user_id');
+        if (!userId) {
+          setError('User ID not found in localStorage');
+          setLoading(false);
+          return;
+        }
+
+        const { data: patient, error: patientError } = await supabase
+          .from('patients')
+          .select('*')
+          .eq('id', userId)
+          .single();
+
+        if (patientError || !patient) {
+          throw new Error(`Patient data not found: ${patientError?.message || 'Unknown error'}`);
+        }
+
+        setPatientData(patient);
+        console.log('✅ Patient data loaded:', patient);
+
+      } catch (err) {
+        console.error('❌ Fetch patient error:', err.message);
+        setError(err.message);
+      } finally {
         setLoading(false);
-        return;
       }
+    };
 
-      const { data: patient, error: patientError } = await supabase
-        .from('patients')
-        .select('*')
-        .eq('id', userId) // or 'user_id' depending on schema
-        .single();
+    fetchData();
+  }, [supabase]);
 
-      if (patientError || !patient) {
-        throw new Error(`Patient data not found: ${patientError?.message || 'Unknown error'}`);
-      }
-
-      setPatientData(patient);
-      console.log('✅ Patient data loaded:', patient);
-
-    } catch (err) {
-      console.error('❌ Fetch patient error:', err.message);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  fetchData();
-}, [supabase]);
-
-
-        
   useEffect(() => {
     loadModels();
   }, []);
@@ -165,7 +212,6 @@ useEffect(() => {
     }
   };
 
-  // !REF for patientData
   const patientDataRef = useRef(null);
   useEffect(() => {
     patientDataRef.current = patientData;
@@ -177,7 +223,6 @@ useEffect(() => {
         video: { width: 640, height: 480 },
       });
       if (videoRef.current) {
-        // Pause before changing srcObject to avoid AbortError
         videoRef.current.pause();
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
@@ -188,108 +233,94 @@ useEffect(() => {
     }
   };
 
-    // !NEW for delay
-    const processEmotions = (expressions) => {
-        if (!expressions) return;
-      
-        const now = Date.now();
-        const emotionEntries = Object.entries(expressions);
-        const dominantEmotion = emotionEntries.reduce((prev, current) =>
-          prev[1] > current[1] ? prev : current
-        );
-      
-        const [emotion, confidence] = dominantEmotion;
-      
-        // Only process if confidence is above threshold
-        if (confidence > EMOTION_CONFIDENCE_THRESHOLD) {
-          // Add to emotion buffer
-          setEmotionBuffer(prev => {
-            const newBuffer = [...prev, { emotion, confidence, timestamp: now }];
-            // Keep only the last EMOTION_BUFFER_SIZE frames
-            return newBuffer.slice(-EMOTION_BUFFER_SIZE);
-          });
-      
-          // Check if enough time has passed since last emotion update
-          if (now - lastEmotionUpdate >= EMOTION_DETECTION_DELAY) {
-            setIsEmotionProcessing(true);
-            
-            // Analyze the emotion buffer for stability
-            setTimeout(() => {
-              setEmotionBuffer(currentBuffer => {
-                if (currentBuffer.length >= EMOTION_BUFFER_SIZE) {
-                  const stableEmotion = analyzeEmotionStability(currentBuffer);
-                  
-                  if (stableEmotion) {
-                    // Update the displayed emotion only if it's stable
-                    setCurrentEmotion(stableEmotion.emotion);
-                    setEmotionConfidence(stableEmotion.confidence);
-                    
-                    // Add to history
-                    setEmotionHistory(prev => {
-                      const newHistory = [...prev, { 
-                        emotion: stableEmotion.emotion, 
-                        confidence: stableEmotion.confidence, 
-                        timestamp: now 
-                      }];
-                      return newHistory.slice(-EMOTION_HISTORY_LIMIT);
-                    });
-      
-                    // Update stats
-                    setEmotionStats(prev => ({
-                      ...prev,
-                      [stableEmotion.emotion]: (prev[stableEmotion.emotion] || 0) + 1,
-                    }));
-      
-                    // Check for alerts
-                    checkEmotionAlerts(stableEmotion.emotion, stableEmotion.confidence);
-                    
-                    setLastEmotionUpdate(now);
-                  }
-                }
-                
-                setIsEmotionProcessing(false);
-                return currentBuffer;
-              });
-            }, 100); // Small delay to ensure state updates
-          }
-        }
-      };
-
-    const analyzeEmotionStability = (buffer) => {
-        if (buffer.length < EMOTION_BUFFER_SIZE) return null;
-      
-        // Count occurrences of each emotion
-        const emotionCounts = {};
-        let totalConfidence = {};
+  const processEmotions = (expressions) => {
+    if (!expressions) return;
+  
+    const now = Date.now();
+    const emotionEntries = Object.entries(expressions);
+    const dominantEmotion = emotionEntries.reduce((prev, current) =>
+      prev[1] > current[1] ? prev : current
+    );
+  
+    const [emotion, confidence] = dominantEmotion;
+  
+    if (confidence > EMOTION_CONFIDENCE_THRESHOLD) {
+      setEmotionBuffer(prev => {
+        const newBuffer = [...prev, { emotion, confidence, timestamp: now }];
+        return newBuffer.slice(-EMOTION_BUFFER_SIZE);
+      });
+  
+      if (now - lastEmotionUpdate >= EMOTION_DETECTION_DELAY) {
+        setIsEmotionProcessing(true);
         
-        buffer.forEach(({ emotion, confidence }) => {
-          emotionCounts[emotion] = (emotionCounts[emotion] || 0) + 1;
-          totalConfidence[emotion] = (totalConfidence[emotion] || 0) + confidence;
-        });
-      
-        // Find the most frequent emotion
-        const mostFrequentEmotion = Object.entries(emotionCounts)
-          .reduce((prev, current) => prev[1] > current[1] ? prev : current);
-      
-        const [emotion, count] = mostFrequentEmotion;
-        const stability = count / buffer.length;
-      
-        // Check if the emotion is stable enough
-        if (stability >= EMOTION_STABILITY_THRESHOLD) {
-          const averageConfidence = totalConfidence[emotion] / count;
-          return {
-            emotion,
-            confidence: averageConfidence,
-            stability,
-            count
-          };
-        }
-      
-        return null;
+        setTimeout(() => {
+          setEmotionBuffer(currentBuffer => {
+            if (currentBuffer.length >= EMOTION_BUFFER_SIZE) {
+              const stableEmotion = analyzeEmotionStability(currentBuffer);
+              
+              if (stableEmotion) {
+                setCurrentEmotion(stableEmotion.emotion);
+                setEmotionConfidence(stableEmotion.confidence);
+                
+                setEmotionHistory(prev => {
+                  const newHistory = [...prev, { 
+                    emotion: stableEmotion.emotion, 
+                    confidence: stableEmotion.confidence, 
+                    timestamp: now 
+                  }];
+                  return newHistory.slice(-EMOTION_HISTORY_LIMIT);
+                });
+
+                setEmotionStats(prev => ({
+                  ...prev,
+                  [stableEmotion.emotion]: (prev[stableEmotion.emotion] || 0) + 1,
+                }));
+
+                checkEmotionAlerts(stableEmotion.emotion, stableEmotion.confidence);
+                
+                setLastEmotionUpdate(now);
+              }
+            }
+            
+            setIsEmotionProcessing(false);
+            return currentBuffer;
+          });
+        }, 100);
+      }
+    }
+  };
+
+  const analyzeEmotionStability = (buffer) => {
+    if (buffer.length < EMOTION_BUFFER_SIZE) return null;
+  
+    const emotionCounts = {};
+    let totalConfidence = {};
+    
+    buffer.forEach(({ emotion, confidence }) => {
+      emotionCounts[emotion] = (emotionCounts[emotion] || 0) + 1;
+      totalConfidence[emotion] = (totalConfidence[emotion] || 0) + confidence;
+    });
+  
+    const mostFrequentEmotion = Object.entries(emotionCounts)
+      .reduce((prev, current) => prev[1] > current[1] ? prev : current);
+  
+    const [emotion, count] = mostFrequentEmotion;
+    const stability = count / buffer.length;
+  
+    if (stability >= EMOTION_STABILITY_THRESHOLD) {
+      const averageConfidence = totalConfidence[emotion] / count;
+      return {
+        emotion,
+        confidence: averageConfidence,
+        stability,
+        count
       };
+    }
+  
+    return null;
+  };
 
-
-const checkEmotionAlerts = (emotion, confidence, stability = 0) => {
+  const checkEmotionAlerts = (emotion, confidence, stability = 0) => {
     const alerts = [];
   
     if (['sad', 'angry', 'fearful'].includes(emotion) && confidence > 0.6) {
@@ -324,6 +355,7 @@ const checkEmotionAlerts = (emotion, confidence, stability = 0) => {
       }, 10000);
     }
   };
+
   const detectFace = async () => {
     if (!videoRef.current || !canvasRef.current || !overlayCanvasRef.current) return;
 
@@ -349,7 +381,6 @@ const checkEmotionAlerts = (emotion, confidence, stability = 0) => {
 
     if (detection) {
       setFaceDetected(true);
-
       processEmotions(detection.expressions);
 
       const box = detection.detection.box;
@@ -392,7 +423,6 @@ const checkEmotionAlerts = (emotion, confidence, stability = 0) => {
       screenY = Math.min(Math.max(screenY, 0), 1);
 
       setGazeDirection({ x: screenX, y: screenY });
-
       checkButtonGaze(screenX, screenY);
     } else {
       setFaceDetected(false);
@@ -432,6 +462,7 @@ const checkEmotionAlerts = (emotion, confidence, stability = 0) => {
     return { x, y };
   };
 
+  // ✅ CORRECTED checkButtonGaze function
   const checkButtonGaze = (gazeX, gazeY) => {
     const buttonElements = document.querySelectorAll('.gaze-button');
     let foundButton = null;
@@ -442,8 +473,16 @@ const checkEmotionAlerts = (emotion, confidence, stability = 0) => {
     const viewportX = gazeX * window.innerWidth;
     const viewportY = gazeY * window.innerHeight;
 
-    buttonElements.forEach((button, index) => {
-      const rect = button.getBoundingClientRect();
+    buttonElements.forEach((buttonElement) => {
+      const rect = buttonElement.getBoundingClientRect();
+      
+      // Get the button ID from the data attribute
+      const buttonId = buttonElement.getAttribute('data-button-id');
+      
+      // Find the corresponding button in the array by ID
+      const buttonData = buttons.find(btn => btn.id === buttonId);
+      
+      if (!buttonData) return; // Skip if button not found
 
       const buttonCenterX = rect.left + rect.width / 2;
       const buttonCenterY = rect.top + rect.height / 2;
@@ -451,20 +490,18 @@ const checkEmotionAlerts = (emotion, confidence, stability = 0) => {
         Math.pow(viewportX - buttonCenterX, 2) + Math.pow(viewportY - buttonCenterY, 2)
       );
 
-      debugText += `${buttons[index].label}: ${distance.toFixed(0)}px `;
+      debugText += `${buttonData.label || buttonData.name}: ${distance.toFixed(0)}px `;
 
       const tolerance = 150 / zoomLevel;
       if (distance < tolerance && distance < minDistance) {
         minDistance = distance;
-        foundButton = buttons[index];
+        foundButton = buttonData; // Now correctly mapped!
       }
     });
 
     setDebugInfo(debugText);
-
     handleGazeTracking(foundButton);
   };
-
 
   const handleGazeTracking = (currentButton) => {
     const now = Date.now();
@@ -542,15 +579,69 @@ const checkEmotionAlerts = (emotion, confidence, stability = 0) => {
       case 'scroll-down':
         handleScrollDown();
         break;
-      case 'section1-action':
-        await handleSection1Action();
+      case 'entertainment':
+        setShowEntertainmentOptions(true);
+        setTimeout(() => {
+          scroll.scrollToBottom({
+            duration: 1500,
+            delay: 0,
+            smooth: 'easeInOutQuint',
+          });
+        }, 200);
         break;
-      case 'section2-action':
-        await handleSection2Action();
+      case 'arijit':
+      case 'lata':
+      case 'rahman':
+      case 'shreya':
+      case 'kishore':
+      case 'rahat':
+      case 'sonu':
+      case 'udit':
+      case 'krishna':
+      case 'bollywood':
+        const selectedButton = buttons.find(button => button.id === buttonId);
+        if (selectedButton?.link) {
+          console.log("Selected: ", selectedButton.link);
+          setSpotifyLink(selectedButton.link);
+        }
         break;
-         case 'entertainment':
-      setShowEntertainmentOptions(true);
-      break;
+      case 'back-to-menu':
+        setShowEntertainmentOptions(false);
+        break;
+      case 'youtube-prev':
+        setCurrentVideoIndex((prev) => {
+            const newIndex = prev > 0 ? prev - 1 : youTubeVideos.length - 1;
+            setCurrentYouTubeVideo(generateYouTubeURL(youTubeVideos[newIndex].id, isYouTubePlaying));
+            return newIndex;
+          });
+          break;
+      case 'youtube-next':
+        setCurrentVideoIndex((prev) => {
+            const newIndex = prev < youTubeVideos.length - 1 ? prev + 1 : 0;
+            setCurrentYouTubeVideo(generateYouTubeURL(youTubeVideos[newIndex].id, isYouTubePlaying));
+            return newIndex;
+          });
+          break;
+      case 'youtube-play-pause':
+        const newPlayState = !isYouTubePlaying;
+        setIsYouTubePlaying(newPlayState);
+        
+        if (!newPlayState) {
+            // For pause: reload iframe with autoplay=0
+            const pauseURL = generateYouTubeURL(youTubeVideos[currentVideoIndex].id, false);
+            setCurrentYouTubeVideo(''); // Clear first
+            setTimeout(() => setCurrentYouTubeVideo(pauseURL), 50); // Then reload
+        } else {
+            // For play: normal URL change
+            setCurrentYouTubeVideo(generateYouTubeURL(youTubeVideos[currentVideoIndex].id, true));
+        }
+        break;
+
+
+      case 'youtube-stop':
+        setIsYouTubePlaying(false);
+        setCurrentYouTubeVideo(generateYouTubeURL(youTubeVideos[currentVideoIndex].id, false));
+        break;
       default:
         break;
     }
@@ -567,101 +658,79 @@ const checkEmotionAlerts = (emotion, confidence, stability = 0) => {
     }, 3000);
   };
 
-  // const handleNurseCall = async () => {
-  //   try {
-  //     await new Promise((resolve) => setTimeout(resolve, 500));
-  //     showNotification('✅ Nurse has been notified!', 'success');
-  //   } catch (error) {
-  //     showNotification('❌ Failed to contact nurse', 'error');
-  //   }
-  // };
-
-const handleNurseCall = async () => {
-  const currentPatientData = patientDataRef.current;
-  if (!currentPatientData) {
-    showNotification('❌ Patient data not found', 'error');
-    return;
-  }
-  try {
-   
-    await new Promise((resolve) => setTimeout(resolve, 300));
-   
-
-    // 👇 Insert into Supabase alert table
-    const nurseId = Array.isArray(currentPatientData.assigned_nurse_ids)
-  ? currentPatientData.assigned_nurse_ids[0]
-  : currentPatientData.assigned_nurse_ids;
-    const { error } = await supabase.from('alert').insert([
-      
-      {
-        name: 'Nurse Call',
-        patient_id: currentPatientData.id,         // assuming you have this
-        nurse_id: nurseId,     // assuming you have this
-        hospital_id: currentPatientData.hospital_id, // assuming you have this
-        status: 'Sent', // or your enum value
-        seen: 'No',
-        createdat: new Date().toISOString(),
-      },
-    ]);
-
-    if (error) {
-      console.error('Supabase alert insert error:', error);
-      showNotification('❌ Failed to NURSE CALL request', 'error');
+  const handleNurseCall = async () => {
+    const currentPatientData = patientDataRef.current;
+    if (!currentPatientData) {
+      showNotification('❌ Patient data not found', 'error');
       return;
     }
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-    showNotification('nurse call request sent to staff!', 'success');
-  } catch (error) {
-    console.error('handlenurse call error:', error);
-    showNotification('❌ Failed to send nurse call request', 'error');
-  }
-};
-  
+      const nurseId = Array.isArray(currentPatientData.assigned_nurse_ids)
+        ? currentPatientData.assigned_nurse_ids[0]
+        : currentPatientData.assigned_nurse_ids;
+      const { error } = await supabase.from('alert').insert([
+        {
+          name: 'Nurse Call',
+          patient_id: currentPatientData.id,
+          nurse_id: nurseId,
+          hospital_id: currentPatientData.hospital_id,
+          status: 'Sent',
+          seen: 'No',
+          createdat: new Date().toISOString(),
+        },
+      ]);
 
+      if (error) {
+        console.error('Supabase alert insert error:', error);
+        showNotification('❌ Failed to NURSE CALL request', 'error');
+        return;
+      }
 
+      showNotification('nurse call request sent to staff!', 'success');
+    } catch (error) {
+      console.error('handlenurse call error:', error);
+      showNotification('❌ Failed to send nurse call request', 'error');
+    }
+  };
 
-const handleWaterRequest = async () => {
-  const currentPatientData = patientDataRef.current;
-  if (!currentPatientData) {
-    showNotification('❌ Patient data not found', 'error');
-    return;
-  }
-  try {
-   
-    await new Promise((resolve) => setTimeout(resolve, 300));
-   
+  const handleWaterRequest = async () => {
+    const currentPatientData = patientDataRef.current;
+    if (!currentPatientData) {
+      showNotification('❌ Patient data not found', 'error');
+      return;
+    }
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-    // 👇 Insert into Supabase alert table
-    const nurseId = Array.isArray(currentPatientData.assigned_nurse_ids)
-  ? currentPatientData.assigned_nurse_ids[0]
-  : currentPatientData.assigned_nurse_ids;
-    const { error } = await supabase.from('alert').insert([
-      
-      {
-        name: 'Water Request',
-        patient_id: currentPatientData.id,         // assuming you have this
-        nurse_id: nurseId,     // assuming you have this
-        hospital_id: currentPatientData.hospital_id, // assuming you have this
-        status: 'Sent', // or your enum value
-        seen: 'No',
-        createdat: new Date().toISOString(),
-      },
-    ]);
+      const nurseId = Array.isArray(currentPatientData.assigned_nurse_ids)
+        ? currentPatientData.assigned_nurse_ids[0]
+        : currentPatientData.assigned_nurse_ids;
+      const { error } = await supabase.from('alert').insert([
+        {
+          name: 'Water Request',
+          patient_id: currentPatientData.id,
+          nurse_id: nurseId,
+          hospital_id: currentPatientData.hospital_id,
+          status: 'Sent',
+          seen: 'No',
+          createdat: new Date().toISOString(),
+        },
+      ]);
 
-    if (error) {
-      console.error('Supabase alert insert error:', error);
+      if (error) {
+        console.error('Supabase alert insert error:', error);
+        showNotification('❌ Failed to send water request', 'error');
+        return;
+      }
+
+      showNotification('💧 Water request sent to staff!', 'success');
+    } catch (error) {
+      console.error('handleWaterRequest error:', error);
       showNotification('❌ Failed to send water request', 'error');
-      return;
     }
-
-    showNotification('💧 Water request sent to staff!', 'success');
-  } catch (error) {
-    console.error('handleWaterRequest error:', error);
-    showNotification('❌ Failed to send water request', 'error');
-  }
-};
-  
-
+  };
 
   const handleFoodRequest = async () => {
     const currentPatientData = patientDataRef.current;
@@ -669,103 +738,75 @@ const handleWaterRequest = async () => {
       showNotification('❌ Patient data not found', 'error');
       return;
     }
- 
-  try {
-   
-    await new Promise((resolve) => setTimeout(resolve, 300));
-   
 
-    // 👇 Insert into Supabase alert table
-    const nurseId = Array.isArray(currentPatientData.assigned_nurse_ids)
-  ? currentPatientData.assigned_nurse_ids[0]
-  : currentPatientData.assigned_nurse_ids;
-    const { error } = await supabase.from('alert').insert([
-      
-      {
-        name: 'Food Request',
-        patient_id: currentPatientData.id,         // assuming you have this
-        nurse_id: nurseId,     // assuming you have this
-        hospital_id: currentPatientData.hospital_id, // assuming you have this
-        status: 'Sent', // or your enum value
-        seen: 'No',
-        createdat: new Date().toISOString(),
-      },
-    ]);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-    if (error) {
-      console.error('Supabase alert insert error:', error);
+      const nurseId = Array.isArray(currentPatientData.assigned_nurse_ids)
+        ? currentPatientData.assigned_nurse_ids[0]
+        : currentPatientData.assigned_nurse_ids;
+      const { error } = await supabase.from('alert').insert([
+        {
+          name: 'Food Request',
+          patient_id: currentPatientData.id,
+          nurse_id: nurseId,
+          hospital_id: currentPatientData.hospital_id,
+          status: 'Sent',
+          seen: 'No',
+          createdat: new Date().toISOString(),
+        },
+      ]);
+
+      if (error) {
+        console.error('Supabase alert insert error:', error);
+        showNotification('❌ Failed to send food request', 'error');
+        return;
+      }
+
+      showNotification('💧 food request sent to staff!', 'success');
+    } catch (error) {
+      console.error('handlFoodRequst error:', error);
       showNotification('❌ Failed to send food request', 'error');
-      return;
     }
+  };
 
-    showNotification('💧 food request sent to staff!', 'success');
-  } catch (error) {
-    console.error('handlFoodRequst error:', error);
-    showNotification('❌ Failed to send food request', 'error');
-  }
-};
-  
-
-  // const handlePainReport = async () => {
-  //   try {
-  //     await new Promise((resolve) => setTimeout(resolve, 300));
-  //     const emotionContext = currentEmotion ? ` (detected emotion: ${currentEmotion})` : '';
-  //     showNotification(`😣 Pain reported to medical staff!${emotionContext}`, 'success');
-  //   } catch (error) {
-  //     showNotification('❌ Failed to report pain', 'error');
-  //   }
-  // };
   const handlePainReport = async () => {
     const currentPatientData = patientDataRef.current;
     if (!currentPatientData) {
       showNotification('❌ Patient data not found', 'error');
       return;
     }
- 
-  try {
-   
-    await new Promise((resolve) => setTimeout(resolve, 300));
-   
 
-    // 👇 Insert into Supabase alert table
-    const nurseId = Array.isArray(currentPatientData.assigned_nurse_ids)
-  ? currentPatientData.assigned_nurse_ids[0]
-  : currentPatientData.assigned_nurse_ids;
-    const { error } = await supabase.from('alert').insert([
-      
-      {
-        name: 'pain report',
-        patient_id: currentPatientData.id,         // assuming you have this
-        nurse_id: nurseId,     // assuming you have this
-        hospital_id: currentPatientData.hospital_id, // assuming you have this
-        status: 'Sent', // or your enum value
-        seen: 'No',
-        createdat: new Date().toISOString(),
-      },
-    ]);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-    if (error) {
-      console.error('Supabase alert insert error:', error);
+      const nurseId = Array.isArray(currentPatientData.assigned_nurse_ids)
+        ? currentPatientData.assigned_nurse_ids[0]
+        : currentPatientData.assigned_nurse_ids;
+      const { error } = await supabase.from('alert').insert([
+        {
+          name: 'pain report',
+          patient_id: currentPatientData.id,
+          nurse_id: nurseId,
+          hospital_id: currentPatientData.hospital_id,
+          status: 'Sent',
+          seen: 'No',
+          createdat: new Date().toISOString(),
+        },
+      ]);
+
+      if (error) {
+        console.error('Supabase alert insert error:', error);
+        showNotification('❌ Failed to send pain report', 'error');
+        return;
+      }
+
+      showNotification(' pain report sent to staff!', 'success');
+    } catch (error) {
+      console.error('handlepanreport error:', error);
       showNotification('❌ Failed to send pain report', 'error');
-      return;
     }
-
-    showNotification(' pain report sent to staff!', 'success');
-  } catch (error) {
-    console.error('handlepanreport error:', error);
-    showNotification('❌ Failed to send pain report', 'error');
-  }
-};
-  
-
-  // const handleBathroomRequest = async () => {
-  //   try {
-  //     await new Promise((resolve) => setTimeout(resolve, 300));
-  //     showNotification('🚽 Bathroom assistance requested!', 'success');
-  //   } catch (error) {
-  //     showNotification('❌ Failed to request assistance', 'error');
-  //   }
-  // };
+  };
 
   const handleBathroomRequest = async () => {
     const currentPatientData = patientDataRef.current;
@@ -773,93 +814,75 @@ const handleWaterRequest = async () => {
       showNotification('❌ Patient data not found', 'error');
       return;
     }
- 
-  try {
-   
-    await new Promise((resolve) => setTimeout(resolve, 300));
-   
 
-    // 👇 Insert into Supabase alert table
-    const nurseId = Array.isArray(currentPatientData.assigned_nurse_ids)
-  ? currentPatientData.assigned_nurse_ids[0]
-  : currentPatientData.assigned_nurse_ids;
-    const { error } = await supabase.from('alert').insert([
-      
-      {
-        name: 'Bathroom Request',
-        patient_id: currentPatientData.id,         // assuming you have this
-        nurse_id: nurseId,     // assuming you have this
-        hospital_id: currentPatientData.hospital_id, // assuming you have this
-        status: 'Sent', // or your enum value
-        seen: 'No',
-        createdat: new Date().toISOString(),
-      },
-    ]);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-    if (error) {
-      console.error('Supabase alert insert error:', error);
+      const nurseId = Array.isArray(currentPatientData.assigned_nurse_ids)
+        ? currentPatientData.assigned_nurse_ids[0]
+        : currentPatientData.assigned_nurse_ids;
+      const { error } = await supabase.from('alert').insert([
+        {
+          name: 'Bathroom Request',
+          patient_id: currentPatientData.id,
+          nurse_id: nurseId,
+          hospital_id: currentPatientData.hospital_id,
+          status: 'Sent',
+          seen: 'No',
+          createdat: new Date().toISOString(),
+        },
+      ]);
+
+      if (error) {
+        console.error('Supabase alert insert error:', error);
+        showNotification('❌ Failed to send bathroom request', 'error');
+        return;
+      }
+
+      showNotification(' bathroom request sent to staff!', 'success');
+    } catch (error) {
+      console.error('handlebathroomRequest error:', error);
       showNotification('❌ Failed to send bathroom request', 'error');
-      return;
     }
+  };
 
-    showNotification(' bathroom request sent to staff!', 'success');
-  } catch (error) {
-    console.error('handlebathroomRequest error:', error);
-    showNotification('❌ Failed to send bathroom request', 'error');
-  }
-};
-  
-
-  // const handleTVControl = async () => {
-  //   try {
-  //     await new Promise((resolve) => setTimeout(resolve, 300));
-  //     showNotification('📺 TV controls activated!', 'success');
-  //   } catch (error) {
-  //     showNotification('❌ Failed to control TV', 'error');
-  //   }
-  // };
   const handleTVControl = async () => {
     const currentPatientData = patientDataRef.current;
     if (!currentPatientData) {
       showNotification('❌ Patient data not found', 'error');
       return;
     }
- 
-  try {
-   
-    await new Promise((resolve) => setTimeout(resolve, 300));
-   
 
-    // 👇 Insert into Supabase alert table
-    const nurseId = Array.isArray(currentPatientData.assigned_nurse_ids)
-  ? currentPatientData.assigned_nurse_ids[0]
-  : currentPatientData.assigned_nurse_ids;
-    const { error } = await supabase.from('alert').insert([
-      
-      {
-        name: 'TV control Request',
-        patient_id: currentPatientData.id,         // assuming you have this
-        nurse_id: nurseId,     // assuming you have this
-        hospital_id: currentPatientData.hospital_id, // assuming you have this
-        status: 'Sent', // or your enum value
-        seen: 'No',
-        createdat: new Date().toISOString(),
-      },
-    ]);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-    if (error) {
-      console.error('Supabase alert insert error:', error);
+      const nurseId = Array.isArray(currentPatientData.assigned_nurse_ids)
+        ? currentPatientData.assigned_nurse_ids[0]
+        : currentPatientData.assigned_nurse_ids;
+      const { error } = await supabase.from('alert').insert([
+        {
+          name: 'TV control Request',
+          patient_id: currentPatientData.id,
+          nurse_id: nurseId,
+          hospital_id: currentPatientData.hospital_id,
+          status: 'Sent',
+          seen: 'No',
+          createdat: new Date().toISOString(),
+        },
+      ]);
+
+      if (error) {
+        console.error('Supabase alert insert error:', error);
+        showNotification('❌ Failed to send TV control request', 'error');
+        return;
+      }
+
+      showNotification('TV control request sent to staff!', 'success');
+    } catch (error) {
+      console.error('handleTVcontrolRequest error:', error);
       showNotification('❌ Failed to send TV control request', 'error');
-      return;
     }
-
-    showNotification('TV control request sent to staff!', 'success');
-  } catch (error) {
-    console.error('handleTVcontrolRequest error:', error);
-    showNotification('❌ Failed to send TV control request', 'error');
-  }
-};
-  
+  };
 
   const handleScrollUp = () => {
     window.scrollBy({
@@ -871,28 +894,10 @@ const handleWaterRequest = async () => {
 
   const handleScrollDown = () => {
     window.scrollBy({
-      top: 100,
+      top: 200,
       behavior: 'smooth',
     });
     showNotification('⬇️ Scrolled Down!', 'success');
-  };
-
-  const handleSection1Action = async () => {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      showNotification('🔧 Section 1 action triggered!', 'success');
-    } catch (error) {
-      showNotification('❌ Failed to trigger Section 1 action', 'error');
-    }
-  };
-
-  const handleSection2Action = async () => {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      showNotification('⚙️ Section 2 action triggered!', 'success');
-    } catch (error) {
-      showNotification('❌ Failed to trigger Section 2 action', 'error');
-    }
   };
 
   const startCalibration = () => {
@@ -902,6 +907,12 @@ const handleWaterRequest = async () => {
     setIsCalibrated(false);
     setMappingParams({ a_x: 1, b_x: 0, a_y: 1, b_y: 0 });
     setGazeDirection({ x: 0.5, y: 0.5 });
+    
+    if (CALIBRATION_POINTS.length === 0) {
+      console.error('CALIBRATION_POINTS array is empty');
+      setIsCalibrating(false);
+      showNotification('❌ Calibration points not defined', 'error');
+    }
   };
 
   const calibratePoint = () => {
@@ -947,19 +958,18 @@ const handleWaterRequest = async () => {
     setIsCalibrating(false);
   };
 
-    // !NEW for delay
-    const clearEmotionBuffer = () => {
-        setEmotionBuffer([]);
-        setLastEmotionUpdate(0);
-        setIsEmotionProcessing(false);
-      };
-    const clearEmotionHistory = () => {
-        setEmotionHistory([]);
-        setEmotionStats({});
-        setEmotionAlerts([]);
-        clearEmotionBuffer(); // Also clear the buffer
-      };
-      
+  const clearEmotionBuffer = () => {
+    setEmotionBuffer([]);
+    setLastEmotionUpdate(0);
+    setIsEmotionProcessing(false);
+  };
+
+  const clearEmotionHistory = () => {
+    setEmotionHistory([]);
+    setEmotionStats({});
+    setEmotionAlerts([]);
+    clearEmotionBuffer();
+  };
 
   const getMostFrequentEmotion = () => {
     if (Object.keys(emotionStats).length === 0) return null;
@@ -1047,136 +1057,131 @@ const handleWaterRequest = async () => {
         ))}
       </div>
 
-      {/* //! NEW panel */}
-{/* Current Emotion Display */}
-<div className="fixed bottom-4 right-4 z-50">
-  <div className="bg-white rounded-lg shadow-lg p-4 min-w-[200px]">
-    <div className="flex items-center justify-between mb-2">
-      <h3 className="text-sm font-semibold text-gray-700">Current Emotion</h3>
-      {isEmotionProcessing && (
-        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-      )}
-    </div>
-    
-    {currentEmotion ? (
-      <div className="flex items-center space-x-2">
-        <span className="text-2xl">{EMOTION_ICONS[currentEmotion]}</span>
-        <div>
-          <div className="font-semibold capitalize" style={{ color: EMOTION_COLORS[currentEmotion] }}>
-            {currentEmotion}
+      {/* Current Emotion Display */}
+      <div className="fixed bottom-4 right-4 z-50">
+        <div className="bg-white rounded-lg shadow-lg p-4 min-w-[200px]">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-gray-700">Current Emotion</h3>
+            {isEmotionProcessing && (
+              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            )}
           </div>
-          <div className="text-sm text-gray-500">
-            {(emotionConfidence * 100).toFixed(1)}% confident
-          </div>
-        </div>
-      </div>
-    ) : (
-      <div className="text-gray-500">
-        {isEmotionProcessing ? 'Processing...' : 'No stable emotion detected'}
-      </div>
-    )}
-    
-    {/* Emotion Buffer Progress */}
-    <div className="mt-2">
-      <div className="text-xs text-gray-500 mb-1">
-        Buffer: {emotionBuffer.length}/{EMOTION_BUFFER_SIZE}
-      </div>
-      <div className="w-full bg-gray-200 rounded-full h-2">
-        <div 
-          className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-          style={{ width: `${(emotionBuffer.length / EMOTION_BUFFER_SIZE) * 100}%` }}
-        ></div>
-      </div>
-    </div>
-    
-    {/* Time until next update */}
-    <div className="text-xs text-gray-500 mt-1">
-      Next update in: {Math.max(0, ((EMOTION_DETECTION_DELAY - (Date.now() - lastEmotionUpdate)) / 1000)).toFixed(1)}s
-    </div>
-    
-    <button
-      onClick={() => setShowEmotionDetails(!showEmotionDetails)}
-      className="mt-2 text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
-    >
-      {showEmotionDetails ? 'Hide' : 'Show'} Details
-    </button>
-  </div>
-</div>
-
-{/* Emotion Details Panel */}
-{showEmotionDetails && (
-  <div className="fixed bottom-32 right-4 z-50 bg-white rounded-lg shadow-lg p-4 max-w-sm">
-    <div className="flex justify-between items-center mb-3">
-      <h3 className="text-sm font-semibold text-gray-700">Emotion Analytics</h3>
-      <button
-        onClick={clearEmotionHistory}
-        className="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-      >
-        Clear All
-      </button>
-    </div>
-    
-    <div className="space-y-2">
-      <div className="text-xs text-gray-600">
-        Most Frequent:{' '}
-        {getMostFrequentEmotion() ? (
-          <>
-            {EMOTION_ICONS[getMostFrequentEmotion()]} {getMostFrequentEmotion()}
-          </>
-        ) : (
-          'None'
-        )}
-      </div>
-      
-      <div className="text-xs text-gray-600">
-        Detection Delay: {EMOTION_DETECTION_DELAY / 1000}s
-      </div>
-      
-      <div className="text-xs text-gray-600">
-        Processing: {isEmotionProcessing ? 'Yes' : 'No'}
-      </div>
-      
-      <div className="text-xs text-gray-600">
-        History: {emotionHistory.length}/{EMOTION_HISTORY_LIMIT}
-      </div>
-      
-      <div className="text-xs space-y-1">
-        <div className="font-semibold">Emotion Count:</div>
-        {Object.entries(emotionStats).map(([emotion, count]) => (
-          <div key={emotion} className="flex justify-between">
-            <span className="capitalize">
-              {EMOTION_ICONS[emotion]} {emotion}
-            </span>
-            <span>{count}</span>
-          </div>
-        ))}
-      </div>
-      
-      {/* Current buffer analysis */}
-      {emotionBuffer.length > 0 && (
-        <div className="text-xs space-y-1 border-t pt-2">
-          <div className="font-semibold">Current Buffer:</div>
-          {(() => {
-            const bufferCounts = {};
-            emotionBuffer.forEach(({ emotion }) => {
-              bufferCounts[emotion] = (bufferCounts[emotion] || 0) + 1;
-            });
-            return Object.entries(bufferCounts).map(([emotion, count]) => (
-              <div key={emotion} className="flex justify-between text-xs">
-                <span>{EMOTION_ICONS[emotion]} {emotion}</span>
-                <span>{count}/{emotionBuffer.length}</span>
+          
+          {currentEmotion ? (
+            <div className="flex items-center space-x-2">
+              <span className="text-2xl">{EMOTION_ICONS[currentEmotion]}</span>
+              <div>
+                <div className="font-semibold capitalize" style={{ color: EMOTION_COLORS[currentEmotion] }}>
+                  {currentEmotion}
+                </div>
+                <div className="text-sm text-gray-500">
+                  {(emotionConfidence * 100).toFixed(1)}% confident
+                </div>
               </div>
-            ));
-          })()}
+            </div>
+          ) : (
+            <div className="text-gray-500">
+              {isEmotionProcessing ? 'Processing...' : 'No stable emotion detected'}
+            </div>
+          )}
+          
+          {/* Emotion Buffer Progress */}
+          <div className="mt-2">
+            <div className="text-xs text-gray-500 mb-1">
+              Buffer: {emotionBuffer.length}/{EMOTION_BUFFER_SIZE}
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${(emotionBuffer.length / EMOTION_BUFFER_SIZE) * 100}%` }}
+              ></div>
+            </div>
+          </div>
+          
+          {/* Time until next update */}
+          <div className="text-xs text-gray-500 mt-1">
+            Next update in: {Math.max(0, ((EMOTION_DETECTION_DELAY - (Date.now() - lastEmotionUpdate)) / 1000)).toFixed(1)}s
+          </div>
+          
+          <button
+            onClick={() => setShowEmotionDetails(!showEmotionDetails)}
+            className="mt-2 text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+          >
+            {showEmotionDetails ? 'Hide' : 'Show'} Details
+          </button>
+        </div>
+      </div>
+
+      {/* Emotion Details Panel */}
+      {showEmotionDetails && (
+        <div className="fixed bottom-32 right-4 z-50 bg-white rounded-lg shadow-lg p-4 max-w-sm">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-semibold text-gray-700">Emotion Analytics</h3>
+            <button
+              onClick={clearEmotionHistory}
+              className="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+            >
+              Clear All
+            </button>
+          </div>
+          
+          <div className="space-y-2">
+            <div className="text-xs text-gray-600">
+              Most Frequent:{' '}
+              {getMostFrequentEmotion() ? (
+                <>
+                  {EMOTION_ICONS[getMostFrequentEmotion()]} {getMostFrequentEmotion()}
+                </>
+              ) : (
+                'None'
+              )}
+            </div>
+            
+            <div className="text-xs text-gray-600">
+              Detection Delay: {EMOTION_DETECTION_DELAY / 1000}s
+            </div>
+            
+            <div className="text-xs text-gray-600">
+              Processing: {isEmotionProcessing ? 'Yes' : 'No'}
+            </div>
+            
+            <div className="text-xs text-gray-600">
+              History: {emotionHistory.length}/{EMOTION_HISTORY_LIMIT}
+            </div>
+            
+            <div className="text-xs space-y-1">
+              <div className="font-semibold">Emotion Count:</div>
+              {Object.entries(emotionStats).map(([emotion, count]) => (
+                <div key={emotion} className="flex justify-between">
+                  <span className="capitalize">
+                    {EMOTION_ICONS[emotion]} {emotion}
+                  </span>
+                  <span>{count}</span>
+                </div>
+              ))}
+            </div>
+            
+            {/* Current buffer analysis */}
+            {emotionBuffer.length > 0 && (
+              <div className="text-xs space-y-1 border-t pt-2">
+                <div className="font-semibold">Current Buffer:</div>
+                {(() => {
+                  const bufferCounts = {};
+                  emotionBuffer.forEach(({ emotion }) => {
+                    bufferCounts[emotion] = (bufferCounts[emotion] || 0) + 1;
+                  });
+                  return Object.entries(bufferCounts).map(([emotion, count]) => (
+                    <div key={emotion} className="flex justify-between text-xs">
+                      <span>{EMOTION_ICONS[emotion]} {emotion}</span>
+                      <span>{count}/{emotionBuffer.length}</span>
+                    </div>
+                  ));
+                })()}
+              </div>
+            )}
+          </div>
         </div>
       )}
-    </div>
-  </div>
-)}
-
-
-
-      {/* //!END NEW panel */}
 
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
@@ -1217,121 +1222,7 @@ const handleWaterRequest = async () => {
                 a_y: {mappingParams.a_y.toFixed(2)}, b_y: {mappingParams.b_y.toFixed(2)})
               </div>
             </div>
-
           </div>
-{showEntertainmentOptions && (
-  <div className="my-6 p-6 bg-gradient-to-br from-purple-50 to-indigo-100 rounded-2xl shadow-xl border border-purple-200">
-    <h2 className="text-2xl text-gray-800 font-bold mb-6 text-center bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text ">
-      🎭 Entertainment Hub
-    </h2>
-     
-    {/* YouTube Section */}
-    <div className="mb-8 bg-white rounded-xl p-5 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
-      <h3 className="text-xl text-gray-800 font-bold mb-4 flex items-center gap-2">
-        🎬 <span className="bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">Movies</span>
-      </h3>
-      <div className="overflow-x-auto overflow-y-hidden scrollbar-hide">
-        <div className="flex gap-4 pb-2">
-          <div className="flex-shrink-0 relative overflow-hidden rounded-xl shadow-md">
-            <iframe
-              width="400"
-              height="225"
-              src="https://www.youtube.com/embed/tgbNymZ7vqY"
-              title="YouTube Movie 1"
-              allowFullScreen
-              className="rounded-xl border-0"
-            />
-          </div>
-          <div className="flex-shrink-0 relative overflow-hidden rounded-xl shadow-md">
-            <iframe
-              width="400"
-              height="225"
-              src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-              title="YouTube Movie 2"
-              allowFullScreen
-              className="rounded-xl border-0"
-            />
-          </div>
-          <div className="flex-shrink-0 relative overflow-hidden rounded-xl shadow-md">
-            <iframe
-              width="400"
-              height="225"
-              src="https://www.youtube.com/embed/9bZkp7q19f0"
-              title="YouTube Movie 3"
-              allowFullScreen
-              className="rounded-xl border-0"
-            />
-          </div>
-          <div className="flex-shrink-0 relative overflow-hidden rounded-xl shadow-md">
-            <iframe
-              width="400"
-              height="225"
-              src="https://www.youtube.com/embed/kJQP7kiw5Fk"
-              title="YouTube Movie 4"
-              allowFullScreen
-              className="rounded-xl border-0"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-     
-    {/* Spotify Section */}
-    <div className="bg-white rounded-xl p-5 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
-      <h3 className="text-xl text-gray-800 font-bold mb-4 flex items-center gap-2">
-        🎵 <span className="bg-gradient-to-r from-green-500 to-emerald-500 bg-clip-text text-transparent">Music</span>
-      </h3>
-      
-      {/* Single Spotify Player */}
-      <div className="relative overflow-hidden rounded-xl shadow-md mb-4">
-        <iframe
-          style={{ borderRadius: "12px" }}
-          src={spotifyLink}
-          width="100%"
-          height="152"
-          allow="encrypted-media"
-          allowFullScreen
-          className="border-0"
-        />
-      </div>
-      
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-wrap gap-3 justify-center">
-          {[
-            { name: 'Arijit Singh', link: 'https://open.spotify.com/embed/artist/4YRxDV8wJFPHPTeXepOstw' },
-            { name: 'Lata Mangeshkar', link: 'https://open.spotify.com/embed/artist/2Yy3eGqvHguKx2cV1xUHi3' },
-            { name: 'A.R. Rahman', link: 'https://open.spotify.com/embed/artist/1mYsTxnqsietFxj1OgoGbG' },
-            { name: 'Shreya Ghoshal', link: 'https://open.spotify.com/embed/artist/0oOet2f43PA68X5RxKobEy' },
-            { name: 'Kishore Kumar', link: 'https://open.spotify.com/embed/artist/3ZztOxur7Gw8pPjZnoNJ8a' },
-            { name: 'Rahat Fateh Ali Khan', link: 'https://open.spotify.com/embed/artist/2FKWNmZWDBZR4dE5KX4plR' },
-            { name: 'Sonu Nigam', link: 'https://open.spotify.com/embed/artist/25uiPmTg16RbhZWAqwLBy5' },
-            { name: 'Udit Narayan', link: 'https://open.spotify.com/embed/artist/70B80Lwx2sxti0M1Ng9e8K' },
-            { name: 'Krishna Bhajan', link: 'https://open.spotify.com/embed/playlist/1MZEK0q8uxzfrWJuK1NB1Y' },
-            { name: 'Bollywood Hits', link: 'https://open.spotify.com/embed/playlist/37i9dQZF1DX0XUsuxWHRQd' }
-          ].map((artist) => (
-            <button
-              key={artist.name}
-              className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-medium rounded-full shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-50"
-              onClick={() => setSpotifyLink(artist.link)}
-            >
-              {artist.name}
-            </button>                   
-          ))}
-        </div>
-        <div className="flex justify-center">
-          <button
-          
-            onClick={() => setShowEntertainmentOptions(false)}
-            className="bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-medium px-6 py-3 rounded-full shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-opacity-50 flex items-center gap-2"
-          >
-            ⬅️ Back to Menu
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
-
 
           {/* Control Buttons */}
           <div className="bg-white rounded-lg shadow-lg p-6">
@@ -1340,6 +1231,7 @@ const handleWaterRequest = async () => {
               {buttons.slice(0, 7).map((button) => (
                 <button
                   key={button.id}
+                  data-button-id={button.id} 
                   className={`gaze-button relative p-6 rounded-lg text-white font-semibold transition-all duration-200 ${
                     button.color
                   } ${
@@ -1375,6 +1267,7 @@ const handleWaterRequest = async () => {
           {buttons.slice(7, 9).map((button) => (
             <button
               key={button.id}
+              data-button-id={button.id} 
               className={`gaze-button relative p-4 rounded-lg text-white font-semibold transition-all duration-200 ${
                 button.color
               } ${
@@ -1405,112 +1298,310 @@ const handleWaterRequest = async () => {
 
         {/* Additional Sections for Testing */}
         <div className="mt-8 space-y-8">
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Section 1: Patient Settings</h2>
-            <p className="text-gray-600 mb-4">
-              Adjust settings related to patient comfort and preferences.
-            </p>
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                className={`gaze-button relative p-6 rounded-lg text-white font-semibold transition-all duration-200 ${
-                  buttons.find((b) => b.id === 'section1-action')?.color
-                } ${
-                  selectedButton === 'section1-action'
-                    ? 'ring-4 ring-yellow-400 scale-105'
-                    : 'hover:scale-105'
-                } ${
-                  activatedButton === 'section1-action' ? 'ring-4 ring-green-400 bg-green-500' : ''
-                }`}
-                onClick={() => activateButton('section1-action')}
-              >
-                <div className="text-3xl mb-2">
-                  {buttons.find((b) => b.id === 'section1-action')?.icon}
-                </div>
-                <div className="text-sm">{buttons.find((b) => b.id === 'section1-action')?.label}</div>
-                {selectedButton === 'section1-action' && (
-                  <div className="absolute inset-0 bg-yellow-400 bg-opacity-30 rounded-lg flex items-center justify-center">
-                    <div className="w-12 h-12 border-4 border-yellow-400 rounded-full relative overflow-hidden">
-                      <div
-                        className="absolute inset-0 bg-yellow-600 transition-all duration-100"
-                        style={{
-                          height: `${gazeProgress * 100}%`,
-                          bottom: 0,
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </button>
-            </div>
-          </div>
+          {showEntertainmentOptions && (
+            <div className="my-6 p-6 bg-gradient-to-br from-purple-50 to-indigo-100 rounded-2xl shadow-xl border border-purple-200">
+              <h2 className="text-2xl text-gray-800 font-bold mb-6 text-center bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text ">
+                🎭 Entertainment Hub
+              </h2>
+               
+              {/* YouTube Section with Gaze Controls */}
+              <div className="mb-8 bg-white rounded-xl p-5 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+                <h3 className="text-xl text-gray-800 font-bold mb-4 flex items-center gap-2">
+                  🎬 <span className="bg-gradient-to-r from-red-500 to-pink-500 bg-clip-text text-transparent">Movies</span>
+                </h3>
+                
+                {/* Video Control Buttons */}
+                <div className="flex gap-3 mb-4 justify-center flex-wrap">
+                  {/* Previous Video Button */}
+                  {(() => {
+                    const prevButton = buttons.find(button => button.id === 'youtube-prev');
+                    return prevButton ? (
+                      <button
+                        key={prevButton.id}
+                        data-button-id={prevButton.id} 
+                        className={`gaze-button relative p-4 rounded-lg text-white font-semibold transition-all duration-200 ${
+                          prevButton.color
+                        } ${
+                          selectedButton === prevButton.id ? 'ring-4 ring-yellow-400 scale-105' : 'hover:scale-105'
+                        } ${
+                          activatedButton === prevButton.id ? 'ring-4 ring-green-400 bg-green-500' : ''
+                        }`}
+                        onClick={() => activateButton(prevButton.id)}
+                      >
+                        <div className="text-2xl mb-1">{prevButton.icon}</div>
+                        <div className="text-xs">{prevButton.label}</div>
+                        {selectedButton === prevButton.id && (
+                          <div className="absolute inset-0 bg-yellow-400 bg-opacity-30 rounded-lg flex items-center justify-center">
+                            <div className="w-8 h-8 border-3 border-yellow-400 rounded-full relative overflow-hidden">
+                              <div
+                                className="absolute inset-0 bg-yellow-600 transition-all duration-100"
+                                style={{
+                                  height: `${gazeProgress * 100}%`,
+                                  bottom: 0,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </button>
+                    ) : null;
+                  })()}
 
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Section 2: Room Controls</h2>
-            <p className="text-gray-600 mb-4">
-              Control room environment settings like lighting and temperature.
-            </p>
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                className={`gaze-button relative p-6 rounded-lg text-white font-semibold transition-all duration-200 ${
-                  buttons.find((b) => b.id === 'section2-action')?.color
-                } ${
-                  selectedButton === 'section2-action'
-                    ? 'ring-4 ring-yellow-400 scale-105'
-                    : 'hover:scale-105'
-                } ${
-                  activatedButton === 'section2-action' ? 'ring-4 ring-green-400 bg-green-500' : ''
-                }`}
-                onClick={() => activateButton('section2-action')}
-              >
-                <div className="text-3xl mb-2">
-                  {buttons.find((b) => b.id === 'section2-action')?.icon}
-                </div>
-                <div className="text-sm">{buttons.find((b) => b.id === 'section2-action')?.label}</div>
-                {selectedButton === 'section2-action' && (
-                  <div className="absolute inset-0 bg-yellow-400 bg-opacity-30 rounded-lg flex items-center justify-center">
-                    <div className="w-12 h-12 border-4 border-yellow-400 rounded-full relative overflow-hidden">
-                      <div
-                        className="absolute inset-0 bg-yellow-600 transition-all duration-100"
-                        style={{
-                          height: `${gazeProgress * 100}%`,
-                          bottom: 0,
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </button>
-            </div>
-          </div>
+                  {/* Play/Pause Button */}
+                  {(() => {
+                    const playPauseButton = buttons.find(button => button.id === 'youtube-play-pause');
+                    return playPauseButton ? (
+                      <button
+                        key={playPauseButton.id}
+                        data-button-id={playPauseButton.id} 
+                        className={`gaze-button relative p-4 rounded-lg text-white font-semibold transition-all duration-200 ${
+                          playPauseButton.color
+                        } ${
+                          selectedButton === playPauseButton.id ? 'ring-4 ring-yellow-400 scale-105' : 'hover:scale-105'
+                        } ${
+                          activatedButton === playPauseButton.id ? 'ring-4 ring-green-400 bg-green-500' : ''
+                        }`}
+                        onClick={() => activateButton(playPauseButton.id)}
+                      >
+                        <div className="text-2xl mb-1">
+                          {isYouTubePlaying ? '⏸️' : '▶️'}
+                        </div>
+                        <div className="text-xs">{isYouTubePlaying ? 'Pause' : 'Play'}</div>
+                        {selectedButton === playPauseButton.id && (
+                          <div className="absolute inset-0 bg-yellow-400 bg-opacity-30 rounded-lg flex items-center justify-center">
+                            <div className="w-8 h-8 border-3 border-yellow-400 rounded-full relative overflow-hidden">
+                              <div
+                                className="absolute inset-0 bg-yellow-600 transition-all duration-100"
+                                style={{
+                                  height: `${gazeProgress * 100}%`,
+                                  bottom: 0,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </button>
+                    ) : null;
+                  })()}
 
-          <div className="h-96 bg-gray-200 rounded-lg p-6">
-            <h2 className="text-xl font-semibold mb-4">Spacer Section</h2>
-            <p className="text-gray-600">
-              This is a spacer section to allow scrolling for testing gaze-controlled scrolling.
-            </p>
-          </div>
-        </div>
+                  {/* Next Video Button */}
+                  {(() => {
+                    const nextButton = buttons.find(button => button.id === 'youtube-next');
+                    return nextButton ? (
+                      <button
+                        key={nextButton.id}
+                        data-button-id={nextButton.id} 
+                        className={`gaze-button relative p-4 rounded-lg text-white font-semibold transition-all duration-200 ${
+                          nextButton.color
+                        } ${
+                          selectedButton === nextButton.id ? 'ring-4 ring-yellow-400 scale-105' : 'hover:scale-105'
+                        } ${
+                          activatedButton === nextButton.id ? 'ring-4 ring-green-400 bg-green-500' : ''
+                        }`}
+                        onClick={() => activateButton(nextButton.id)}
+                      >
+                        <div className="text-2xl mb-1">{nextButton.icon}</div>
+                        <div className="text-xs">{nextButton.label}</div>
+                        {selectedButton === nextButton.id && (
+                          <div className="absolute inset-0 bg-yellow-400 bg-opacity-30 rounded-lg flex items-center justify-center">
+                            <div className="w-8 h-8 border-3 border-yellow-400 rounded-full relative overflow-hidden">
+                              <div
+                                className="absolute inset-0 bg-yellow-600 transition-all duration-100"
+                                style={{
+                                  height: `${gazeProgress * 100}%`,
+                                  bottom: 0,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </button>
+                    ) : null;
+                  })()}
+
+                  {/* Stop Button */}
+                  {(() => {
+                    const stopButton = buttons.find(button => button.id === 'youtube-stop');
+                    return stopButton ? (
+                      <button
+                        key={stopButton.id}
+                        data-button-id={stopButton.id}
+                        className={`gaze-button relative p-4 rounded-lg text-white font-semibold transition-all duration-200 ${
+                          stopButton.color
+                        } ${
+                          selectedButton === stopButton.id ? 'ring-4 ring-yellow-400 scale-105' : 'hover:scale-105'
+                        } ${
+                          activatedButton === stopButton.id ? 'ring-4 ring-green-400 bg-green-500' : ''
+                        }`}
+                        onClick={() => activateButton(stopButton.id)}
+                      >
+                        <div className="text-2xl mb-1">{stopButton.icon}</div>
+                        <div className="text-xs">{stopButton.label}</div>
+                        {selectedButton === stopButton.id && (
+                          <div className="absolute inset-0 bg-yellow-400 bg-opacity-30 rounded-lg flex items-center justify-center">
+                            <div className="w-8 h-8 border-3 border-yellow-400 rounded-full relative overflow-hidden">
+                              <div
+                                className="absolute inset-0 bg-yellow-600 transition-all duration-100"
+                                style={{
+                                  height: `${gazeProgress * 100}%`,
+                                  bottom: 0,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </button>
+                    ) : null;
+                  })()}
+                </div>
+
+                {/* YouTube Player */}
+                <div className="relative overflow-hidden rounded-xl shadow-md">
+                  <iframe
+                    id="youtube-player"
+                    width="100%"
+                    height="400"
+                    src={currentYouTubeVideo}
+                    title="YouTube Video Player"
+                    allowFullScreen
+                    className="rounded-xl border-0"
+                  />
+                  
+                  {/* Video Info Overlay */}
+                  <div className="absolute top-2 left-2 bg-black bg-opacity-60 rounded-full px-3 py-1 text-white text-sm">
+                    {currentVideoIndex + 1} / {youTubeVideos.length}
+                  </div>
+                  
+                  {/* Status Indicator */}
+                  <div className="absolute top-2 right-2 bg-black bg-opacity-60 rounded-full px-3 py-1 text-white text-sm">
+                    {isYouTubePlaying ? '▶️ Playing' : '⏸️ Paused'}
+                  </div>
+                </div>
+
+                {/* Current Video Title */}
+                <div className="text-center text-gray-700 font-medium mt-3">
+                  Now Playing: {youTubeVideos[currentVideoIndex]?.title}
+                </div>
+              </div>
+               
+              {/* Spotify Section */}
+              <div className="bg-white rounded-xl p-5 shadow-lg border border-gray-100 hover:shadow-xl transition-shadow duration-300">
+                <h3 className="text-xl text-gray-800 font-bold mb-4 flex items-center gap-2">
+                  🎵 <span className="bg-gradient-to-r from-green-500 to-emerald-500 bg-clip-text text-transparent">Music</span>
+                </h3>
+                
+                {/* Single Spotify Player */}
+                <div className="relative overflow-hidden rounded-xl shadow-md mb-4">
+                  <iframe
+                    style={{ borderRadius: "12px" }}
+                    src={spotifyLink}
+                    width="100%"
+                    height="152"
+                    allow="encrypted-media"
+                    allowFullScreen
+                    className="border-0"
+                  />
+                </div>
+                
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-wrap gap-3 justify-center">
+                    {buttons.slice(9, 19).map((artist) => (
+                      <button
+                        key={artist.id}
+                        data-button-id={artist.id}
+                        className={`gaze-button relative p-4 rounded-lg text-white font-semibold transition-all duration-200 ${
+                          artist.color
+                        } ${
+                          selectedButton === artist.id ? 'ring-4 ring-yellow-400 scale-105' : 'hover:scale-105'
+                        } ${
+                          activatedButton === artist.id ? 'ring-4 ring-green-400 bg-green-500' : ''
+                        }`}
+                        onClick={() => activateButton(artist.id)}
+                      >
+                        <div className="text-2xl mb-1">{artist.icon}</div>
+                        <div className="text-xs">{artist.name}</div>
+                        {selectedButton === artist.id && (
+                          <div className="absolute inset-0 bg-yellow-400 bg-opacity-30 rounded-lg flex items-center justify-center">
+                            <div className="w-8 h-8 border-3 border-yellow-400 rounded-full relative overflow-hidden">
+                              <div
+                                className="absolute inset-0 bg-yellow-600 transition-all duration-100"
+                                style={{
+                                  height: `${gazeProgress * 100}%`,
+                                  bottom: 0,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex justify-center">
+                    {(() => {
+                      const backButton = buttons.find(button => button.id === 'back-to-menu');
+                      return backButton ? (
+                        <button
+                          key={backButton.id}
+                          data-button-id={backButton.id} 
+                          className={`gaze-button relative p-4 rounded-lg text-white font-semibold transition-all duration-200 ${
+                            backButton.color
+                          } ${
+                            selectedButton === backButton.id ? 'ring-4 ring-yellow-400 scale-105' : 'hover:scale-105'
+                          } ${
+                            activatedButton === backButton.id ? 'ring-4 ring-green-400 bg-green-500' : ''
+                          }`}
+                          onClick={() => activateButton(backButton.id)}
+                        >
+                          <div className="text-2xl mb-1">{backButton.icon}</div>
+                          <div className="text-xs">{backButton.label}</div>
+                          {selectedButton === backButton.id && (
+                            <div className="absolute inset-0 bg-yellow-400 bg-opacity-30 rounded-lg flex items-center justify-center">
+                              <div className="w-8 h-8 border-3 border-yellow-400 rounded-full relative overflow-hidden">
+                                <div
+                                  className="absolute inset-0 bg-yellow-600 transition-all duration-100"
+                                  style={{
+                                    height: `${gazeProgress * 100}%`,
+                                    bottom: 0,
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </button>
+                      ) : null;
+                    })()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div> 
 
         {isCalibrating && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-8 text-center">
               <h3 className="text-xl font-semibold mb-4">Calibration</h3>
               <p className="mb-6">
-                Look at the red dot at {CALIBRATION_POINTS[currentCalibrationPoint]?.label} and click
-                calibrate
+                {currentCalibrationPoint < CALIBRATION_POINTS.length
+                  ? <>Look at the red dot at {CALIBRATION_POINTS[currentCalibrationPoint]?.label || 'Unknown'} and click calibrate</>
+                  : <>Calibration complete!</>
+                }
               </p>
               <div className="fixed inset-0 pointer-events-none">
-                <div
-                  className="absolute w-6 h-6 bg-red-500 rounded-full transform -translate-x-1/2 -translate-y-1/2 animate-pulse"
-                  style={{
-                    left: `${CALIBRATION_POINTS[currentCalibrationPoint]?.x * 100}%`,
-                    top: `${CALIBRATION_POINTS[currentCalibrationPoint]?.y * 100}%`,
-                  }}
-                />
+                {currentCalibrationPoint < CALIBRATION_POINTS.length && CALIBRATION_POINTS[currentCalibrationPoint] && (
+                  <div
+                    className="absolute w-6 h-6 bg-red-500 rounded-full transform -translate-x-1/2 -translate-y-1/2 animate-pulse"
+                    style={{
+                      left: `${CALIBRATION_POINTS[currentCalibrationPoint].x * 100}%`,
+                      top: `${CALIBRATION_POINTS[currentCalibrationPoint].y * 100}%`,
+                    }}
+                  />
+                )}
               </div>
               <button
                 onClick={calibratePoint}
                 className="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg mr-4"
+                disabled={currentCalibrationPoint >= CALIBRATION_POINTS.length}
               >
                 Calibrate Point
               </button>
